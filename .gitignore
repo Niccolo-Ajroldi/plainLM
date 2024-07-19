@@ -1,0 +1,32 @@
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore virtual environment directories
+venv/
+env/
+.venv/
+.env/
+
+# Ignore log files
+*.log
+
+# Ignore data files
+*.csv
+*.json
+
+# Ignore any other temporary or sensitive files
+*.tmp
+*.bak
+*.swp
+
+# Ignore specific system files
+.DS_Store
+Thumbs.db
+
+# Ignore Weights & Biases (wandb) files
+wandb/
+*.wandb
