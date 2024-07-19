@@ -1,5 +1,5 @@
 # Pretrain a Transformer on language modeling.
-Minimal implementation of a Transformer model and a training script for language modeling in PyTorch. 
+Minimal implementation of a Transformer model and a training script for language modeling in PyTorch. \
 Supports multi-GPU training via Distributed Data Parallel (DDP).
 
 ### Usage
