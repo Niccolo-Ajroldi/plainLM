@@ -16,11 +16,11 @@ validset_path: null
 eval_every_micro_steps: null
 
 model: 'transformer'
-d_model: 256
+d_model: 768
 expand: '8/3'
-mlp_class: 'mlp'
-n_layers: 4
-n_heads: 8
+mlp_class: 'glu'
+n_layers: 12
+n_heads: 12
 rms_norm: True
 tie_embeddings: False
 torch_compile: True
