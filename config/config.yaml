@@ -4,7 +4,7 @@
 determinisitc: False
 seed: 100
 
-trainset_path: "/fast/najroldi/data/lm/slim_pajama/new_sp_3B_tokens/train"
+trainset_path: "/fast/najroldi/data/lm/slim_pajama/new_sp_15B_tokens/train"
 vocab_size: 50280
 seq_len: 2048
 sampler: 'sequential'
@@ -16,23 +16,23 @@ validset_path: null
 eval_every_micro_steps: null
 
 model: 'transformer'
-d_model: 256
+d_model: 768
+mlp_class: 'glu'
 expand: '8/3'
-mlp_class: 'mlp'
-n_layers: 4
-n_heads: 8
+n_layers: 12
+n_heads: 12
 rms_norm: True
 tie_embeddings: False
 torch_compile: True
 
 # note: set one of these two
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps)
-steps_budget: 120
+steps_budget: 4800
 
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
 micro_batch_size: 32
-grad_accumulation_steps: 4
+grad_accumulation_steps: 8
 
 # note: choose between {float32, float16, bfloat16}
 # note: float16 data type will automatically use a GradScaler
@@ -40,7 +40,7 @@ dtype: 'bfloat16'
 
 optim: 'adamw'
 fused_optim: True
-lr: 1.e-3
+lr: 3.e-3
 weight_decay: 0.1
 beta1: 0.9
 beta2: 0.95
@@ -53,14 +53,14 @@ lr_start: 0.0
 lr_end: 1.e-5
 lr_end_pct: null
 
-log_every_micro_steps: 4
+log_every_micro_steps: 1
 print_progress: True
 
-use_wandb: True
+use_wandb: False
 wandb_project: 'llm'
 wandb_dir: '/fast/najroldi/logs/llm/wandb'
-wandb_run_name: 'debug'
-exp_name: 'debug'
+wandb_run_name: 'tr_check'
+exp_name: 'tr_check'
 out_dir: '/fast/najroldi/exp/llm'
 over_write: True
 
@@ -68,7 +68,7 @@ resume: False
 resume_micro_step: null
 resume_exp_name: null
 
-save_last_checkpoint: True
+save_last_checkpoint: False
 save_intermediate_checkpoints: False
 save_every_micro_steps: null
 

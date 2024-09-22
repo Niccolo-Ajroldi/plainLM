@@ -10,13 +10,13 @@ from models import get_param_groups
 from optim import intialize_optimizer, initalize_scheduler
 
 
-def _move_to_device(batch, seq_len, device_type, device):
+def _move_to_device(batch, seq_len, device):
   """Slice batch to get inputs and targets, and move them to device."""
   
   inputs = batch['input_ids'][:,:seq_len]
   targets = batch['input_ids'][:,1:(seq_len+1)]
 
-  if device_type == 'cuda':
+  if 'cuda' in device:
     # pin arrays allows to move them to GPU asynchronously (non_blocking=True)
     inputs = inputs.pin_memory().to(device, non_blocking=True)
     targets = targets.pin_memory().to(device, non_blocking=True)
@@ -47,7 +47,7 @@ class TorchEngine(torch.nn.Module):
     self.seq_len = cfg.seq_len
     self.accumulation_steps = cfg.grad_accumulation_steps
     self.grad_clip = cfg.grad_clip
-    dtype = cfg.dtype
+    self.dtype = cfg.dtype
 
     self.device = device
     
@@ -62,19 +62,17 @@ class TorchEngine(torch.nn.Module):
       self.model = DDP(self.model, device_ids=[local_rank])
 
     # Compile
-    self.model_class_name = type(model).__name__ # ouch, ugly
     if cfg.torch_compile:
       print(f"Compiling the model...")
       self.model = torch.compile(self.model)
 
     # AMP
     device_type = 'cuda' if 'cuda' in device else 'cpu'
-    ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torch.float16}[dtype]
+    ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torch.float16}[self.dtype]
     self.ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=device_type, dtype=ptdtype)
-    self.device_type = device_type
 
     # Grad scaler if training in fp16, if enabled=False, scaler is a no-op
-    self.scaler = torch.cuda.amp.GradScaler(enabled=(dtype == 'float16'))
+    self.scaler = torch.amp.GradScaler(enabled=(self.dtype == 'float16'))
 
     # Loss
     self.criterion = CrossEntropyLoss()
@@ -98,7 +96,7 @@ class TorchEngine(torch.nn.Module):
     self.micro_steps += 1
     self.accumulated_samples += 1
 
-    inputs, targets = _move_to_device(batch, self.seq_len, self.device_type, self.device)
+    inputs, targets = _move_to_device(batch, self.seq_len, self.device)
 
     # sync gradients at the last accumulation step
     if torch.distributed.is_initialized():
@@ -150,19 +148,20 @@ class TorchEngine(torch.nn.Module):
     # Compute loss on validloader
     losses = []
     for batch in validloader:
-      inputs, targets = _move_to_device(batch, self.seq_len, self.device_type, self.device)
-      logits = self.model(inputs)
+      inputs, targets = _move_to_device(batch, self.seq_len, self.device)
+      with self.ctx:
+        logits = self.model(inputs)
       loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
       losses.append(loss.item())
     
-    total_loss = sum(losses)
+    summed_loss = sum(losses)
 
-    # Reduce loss over processes
+    # Reduce loss across processes
     if not dist.is_initialized():
-      mean_loss = total_loss / len(validloader)
+      avg_loss = summed_loss / len(validloader)
     else:
-      total_loss_tensor = torch.tensor([total_loss], device=self.device)
-      dist.all_reduce(total_loss_tensor, op=dist.ReduceOp.SUM)
-      mean_loss = total_loss_tensor.item() / (dist.get_world_size() * len(validloader))
+      total_loss = torch.tensor([summed_loss], device=self.device)
+      dist.all_reduce(total_loss, op=dist.ReduceOp.SUM)
+      avg_loss = total_loss.item() / (dist.get_world_size() * len(validloader))
       
-    return mean_loss
+    return avg_loss
