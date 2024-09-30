@@ -1,4 +1,4 @@
-# Pretrain a Transformer on language modeling.
+# Pretrain a Transformer on Causal Language Modeling.
 Minimal implementation of a Transformer model and a training script for language modeling in PyTorch. \
 Supports multi-GPU training via Distributed Data Parallel (DDP).
 
