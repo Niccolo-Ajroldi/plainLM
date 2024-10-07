@@ -32,4 +32,5 @@ Supports multi-GPU training via Distributed Data Parallel (DDP).
   - add seed to `DistributedSampler`
 - test macOS metal support
 - add `LinearCooldown` compatible with `WarmupConstant`
+- add dummy data
 
