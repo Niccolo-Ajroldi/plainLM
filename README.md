@@ -6,11 +6,11 @@ It supports distributed training via Distributed Data Parallel (DDP).
 ### Usage
 
 ##### Single GPU/CPU:
-```
+```bash
   python train.py --config=config/config.yaml
 ```
 ##### Multiple GPUs:
-```
+```bash
   torchrun --nnodes=1 --nproc_per_node=4 train.py --config=code/config/sweep.yaml
 ```
 
