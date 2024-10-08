@@ -1,6 +1,7 @@
 # Pretrain a Transformer on Causal Language Modeling.
-Minimal implementation of a Transformer model and a training script for language modeling in PyTorch. \
-Supports multi-GPU training via Distributed Data Parallel (DDP).
+Minimal training script for language modeling in PyTorch. \
+It includes custom implementation of a Transformer model, with RoPE, GLU, RMSNorm. \
+It supports distributed training via Distributed Data Parallel (DDP).
 
 ### Usage
 
@@ -23,7 +24,7 @@ Supports multi-GPU training via Distributed Data Parallel (DDP).
    ...
    ```
 2. **Submit the Sweep**: 
-  Use `job_idx` to specify which configuration file to use. The `job_idx` should range from `0` to `n-1`, where `n` is the number of configurations in the YAML. This is done automatically by `condor.sub`. Python takes care of assigning the corresponding configuration to each job based on the `job_idx`.
+  Use `job_idx` to specify which configuration file to use. `job_idx` should range from `0` to `n-1`, where `n` is the number of configurations in the YAML. This is done automatically by `condor.sub`. Python takes care of assigning the corresponding configuration to each job based on the `job_idx`.
 
 
 ### TODO:
@@ -33,4 +34,6 @@ Supports multi-GPU training via Distributed Data Parallel (DDP).
 - test macOS metal support
 - add `LinearCooldown` compatible with `WarmupConstant`
 - add dummy data
+- send eval results when log_every is not a multiple of eval every (also better logger)
+- FSDP2 support
 
