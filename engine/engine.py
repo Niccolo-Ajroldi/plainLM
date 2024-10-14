@@ -98,14 +98,15 @@ class TorchEngine(torch.nn.Module):
 
     inputs, targets = _move_to_device(batch, self.seq_len, self.device)
 
-    # sync gradients at the last accumulation step
+    # sync (reduce) gradients at the last accumulation step
     if torch.distributed.is_initialized():
       self.model.require_backward_grad_sync = \
         (self.accumulated_samples == self.accumulation_steps)
 
     # forward pass with autocasting
     with self.ctx:
-      logits = self.model(inputs)
+      output = self.model(inputs)
+      logits = getattr(output, 'logits', output)
       loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
       loss = loss / self.accumulation_steps
 
@@ -140,28 +141,37 @@ class TorchEngine(torch.nn.Module):
 
 
   @torch.no_grad()
-  def eval(self, validloader):
+  def eval(self, dataloader):
     """Evaluate model on a dataloader."""
     
     self.model.eval()
     
-    # Compute loss on validloader
-    losses = []
-    for batch in validloader:
+    # Compute loss on dataloader
+    total_loss = 0.0
+    num_batches = 0
+    for batch in dataloader:
       inputs, targets = _move_to_device(batch, self.seq_len, self.device)
       with self.ctx:
-        logits = self.model(inputs)
+        output = self.model(inputs)
+        logits = getattr(output, 'logits', output)
         loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
-      losses.append(loss.item())
     
-    summed_loss = sum(losses)
+      if torch.isnan(loss) or loss is None:
+        raise ValueError("Validation loss is nan")
+    
+      total_loss += loss.item()
+      num_batches += 1
 
-    # Reduce loss across processes
-    if not dist.is_initialized():
-      avg_loss = summed_loss / len(validloader)
-    else:
-      total_loss = torch.tensor([summed_loss], device=self.device)
-      dist.all_reduce(total_loss, op=dist.ReduceOp.SUM)
-      avg_loss = total_loss.item() / (dist.get_world_size() * len(validloader))
-      
+    # reduce loss across processes
+    if dist.is_initialized():
+      total_loss_tensor = torch.tensor([total_loss], device=self.device)
+      num_batches_tensor = torch.tensor([num_batches], device=self.device, dtype=torch.int)
+      dist.all_reduce(total_loss_tensor, op=dist.ReduceOp.SUM)
+      dist.all_reduce(num_batches_tensor, op=dist.ReduceOp.SUM)
+      total_loss = total_loss_tensor.item() / dist.get_world_size()
+      num_batches = num_batches_tensor.item() // dist.get_world_size() # superflous if drop_last=True in dataloader
+
+    # calculate average loss
+    avg_loss = total_loss / num_batches
+
     return avg_loss
