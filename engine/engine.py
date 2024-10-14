@@ -117,13 +117,13 @@ class TorchEngine(torch.nn.Module):
     # backward pass, with gradient scaling if training in fp16
     self.scaler.scale(loss).backward()
 
-    if self.grad_clip:
-      self.scaler.unscale_(self.optimizer)
-      torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
-
     # step after accumulation
     if self.accumulated_samples == self.accumulation_steps:
       self.accumulated_samples = 0
+
+      if self.grad_clip:
+        self.scaler.unscale_(self.optimizer)
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
 
       # step the optimizer, step the scaler if training in fp16
       self.scaler.step(self.optimizer)
