@@ -151,7 +151,7 @@ class TorchEngine(torch.nn.Module):
       inputs, targets = _move_to_device(batch, self.seq_len, self.device)
       with self.ctx:
         logits = self.model(inputs)
-      loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
+        loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
       losses.append(loss.item())
     
     summed_loss = sum(losses)
