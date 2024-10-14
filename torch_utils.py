@@ -6,6 +6,8 @@ import torch
 
 from torch.distributed import init_process_group, destroy_process_group
 
+from utils import print_master
+
 
 def pytorch_setup(cfg):
   """Returns device, rank, seed, etc and initialize DDP"""
@@ -35,10 +37,19 @@ def pytorch_setup(cfg):
   np.random.seed(cfg.seed + seed_offset)
   torch.manual_seed(cfg.seed + seed_offset)
   
-  torch.backends.cuda.matmul.allow_tf32 = True
-  torch.backends.cudnn.allow_tf32 = True
+  # allow TF32
+  torch.backends.cuda.matmul.allow_tf32 = getattr(cfg, 'cuda_allow_tf32', False)
+  torch.backends.cudnn.allow_tf32 = getattr(cfg, 'cudnn_allow_tf32', False)
 
-  if cfg.determinisitc:
+  # limit CUDA memory
+  if hasattr(cfg, 'set_memory_fraction'):
+    tot_mem_gb = torch.cuda.get_device_properties(device).total_memory / 1e9
+    red_mem_gb = tot_mem_gb * cfg.set_memory_fraction
+    print_master(f"Limit GPU memory from {tot_mem_gb:.2f}GB to: {red_mem_gb:.2f}GB")
+    torch.cuda.set_per_process_memory_fraction(cfg.set_memory_fraction, device=device)
+
+  # deterministic run
+  if getattr(cfg, 'determinisitc', False):
     torch.use_deterministic_algorithms(True)
     os.environ["CUBLAS_WORKSPACE_CONFIG"]=":4096:8"
     torch.backends.cudnn.benchmark = False
