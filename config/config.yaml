@@ -13,7 +13,7 @@ num_workers: 4
 
 eval: False
 validset_path: null
-eval_every_micro_steps: null
+eval_every_steps: null
 
 model: 'transformer'
 d_model: 768
@@ -39,7 +39,7 @@ grad_accumulation_steps: 8
 dtype: 'bfloat16'
 
 optim: 'adamw'
-fused_optim: True
+fused_optim: True 
 lr: 3.e-3
 weight_decay: 0.1
 beta1: 0.9
@@ -53,7 +53,7 @@ lr_start: 0.0
 lr_end: 1.e-5
 lr_end_pct: null
 
-log_every_micro_steps: 1
+log_every_steps: 1
 print_progress: True
 
 use_wandb: False
@@ -70,5 +70,5 @@ resume_exp_name: null
 
 save_last_checkpoint: False
 save_intermediate_checkpoints: False
-save_every_micro_steps: null
+save_every_steps: null
 

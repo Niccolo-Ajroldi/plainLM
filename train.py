@@ -35,9 +35,6 @@ def main(_):
   # Dataset
   trainloader, validloader = get_dataloaders(cfg)
   
-  # Fix a step budget
-  micro_steps_budget = cfg.steps_budget * cfg.grad_accumulation_steps
-  
   # Model
   model, model_cfg = construct_model(cfg)
   
@@ -50,7 +47,8 @@ def main(_):
   train_losses = []
   
   for micro_step, micro_batch in enumerate(trainloader, micro_step_start+1):
-    if micro_step > micro_steps_budget:
+    step = micro_step // cfg.grad_accumulation_steps
+    if step > cfg.steps_budget:
       break
 
     # Train
@@ -59,19 +57,19 @@ def main(_):
 
     # Eval
     valid_loss = None
-    if cfg.eval and micro_step % cfg.eval_every_micro_steps == 0:
+    if cfg.eval and step % cfg.eval_every_steps == 0:
       print_master("Evaluating on validation set")
       valid_loss = engine.eval(validloader)
     
     # Log
-    if micro_step % cfg.log_every_micro_steps == 0:
+    if step % cfg.log_every_steps == 0:
       if master_process:
         utils.log(cfg, metrics, micro_step, train_losses, valid_loss, engine.optimizer, world_size)
       train_losses = []
     
     # Checkpoint
     if master_process and cfg.save_intermediate_checkpoints \
-        and micro_step % cfg.save_every_micro_steps == 0:
+        and micro_step % cfg.save_every_steps == 0:
       save_checkpoint(micro_step-1, model, engine, cfg, JOB_IDX)
 
   # End of training: log and save checkpoint
