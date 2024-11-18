@@ -1,7 +1,8 @@
 # Pretrain a Transformer on Causal Language Modeling.
 Minimal training script for language modeling in PyTorch. \
 It includes a custom implementation of a Transformer model, with RoPE, GLU, RMSNorm, compatible with `torch.compile`. 
-It supports distributed training via Distributed Data Parallel (DDP).
+It supports distributed training via Distributed Data Parallel (DDP). \
+It includes a script for downloading, tokenizing, and chunking data.
 
 ### Usage
 
