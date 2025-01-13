@@ -29,7 +29,6 @@ def save_checkpoint(micro_step, model, engine, cfg, job_idx=None):
   print(f"Successfully saved checkpoint!")
 
 
-
 def maybe_load_checkpoint(cfg, device):
   
   ckpt = None
