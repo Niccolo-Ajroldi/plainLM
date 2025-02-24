@@ -51,7 +51,7 @@ plainLM/
 └── utils.py             # Miscellaneous helper functions
 ```
 
-### TODO:
+## ☑️ TODO:
 - SLURM support
 - improve readibility in data loading
 - add seed to `DistributedSampler`
