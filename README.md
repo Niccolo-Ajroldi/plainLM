@@ -1,5 +1,5 @@
-# Pretrain a Transformer on Causal Language Modeling.
-A minimal yet efficient implementation of language modeling in PyTorch.
+# Pretrain a Transformer for Language Modeling.
+A minimal yet efficient implementation of causal language modeling in PyTorch.
 
 It features a custom torch-compilable Transformer model implementation supporting RoPE, GLU, and RMSNorm.
 It supports distributed training via Distributed Data Parallel (DDP).
