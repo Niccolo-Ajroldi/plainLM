@@ -7,6 +7,8 @@ It includes a script for downloading, tokenizing, and chunking data.
 
 ### Usage
 
+Specify hyperparameters in a `yaml` file and launch training as follows:
+
 ##### Single GPU/CPU:
 ```bash
   python train.py --config=config/config.yaml
