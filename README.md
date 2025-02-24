@@ -6,7 +6,7 @@ It supports distributed training via Distributed Data Parallel (DDP).
 
 A dedicated script is included for downloading, tokenizing, and chunking data, making data preparation seamless.
 
-## ⛳️ Usage
+## ⚡️ Usage
 
 Specify hyperparameters in `config.yaml` and launch training as follows:
 
