@@ -26,7 +26,7 @@ Specify hyperparameters in `config.yaml` and launch training as follows:
   torchrun --nnodes=1 --nproc_per_node=4 train.py --config=code/config/sweep.yaml
 ```
 
-#### Run a sweep in parallel on a Condor HPC cluster:
+#### Run a sweep in parallel on a SLURM or Condor HPC cluster:
 
 1. **Define hyperparameter sweep**:
   create a single YAML file with lists of hyperparameter values. Each value in the list will represent a different configuration, e.g.:
