@@ -9,7 +9,7 @@ A dedicated script is included for downloading, tokenizing, and chunking data, m
 ## 🛠 Installation
 We recommend running `plainLM` in a dedicated Python environment. To install dependencies in an Anaconda environment, execute:
 ```bash
-conda create --name plainLM python=3.13 -y && conda activate plainLM
+conda create --name plainLM python=3.12 -y && conda activate plainLM
 pip install -r requirements.txt
 ```
 
@@ -59,7 +59,6 @@ plainLM/
 ```
 
 ## ☑️ TODO
-- test SLURM support
 - improve readibility in data loading
 - add seed to `DistributedSampler`
 - add `LinearCooldown` compatible with `WarmupConstant`
