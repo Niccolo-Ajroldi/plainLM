@@ -60,11 +60,11 @@ plainLM/
 ```
 
 ## ☑️ TODO
+- dummy data
+- FSDP2 support
+- unit tests
 - improve readibility in data loading
 - add seed to `DistributedSampler`
 - add `LinearCooldown` compatible with `WarmupConstant`
-- add dummy data
 - send eval results when log_every is not a multiple of eval every + better logger
-- FSDP2 support
-- add unit tests
 
