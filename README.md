@@ -33,10 +33,11 @@ Specify hyperparameters in `config.yaml` and launch training as follows:
    ```yaml
    lr: [0.1, 0.01]
    wd: [0.1, 0.2, 0.5]
+   beta1: 0.9
    ...
    ```
 2. **Submit the sweep**: 
-  use `job_idx` to specify which configuration file to use. `job_idx` should range from `0` to `n-1`, where `n` is the number of configurations in the YAML. This is done automatically by `condor.sub`. Python takes care of assigning the corresponding configuration to each job based on the `job_idx`.
+   Submit a job-array, where each job executes the same python script and reads the same configuration, but with a different `job_idx`. We use `job_idx` to map a job to its hyperparameters; `job_idx` should range from `0` to `n-1`, where `n` is the number of configurations in the YAML. This is done automatically by `slurm.sh` and `condor.sub`. Python takes care of assigning the corresponding configuration to each job based on the value of `job_idx`.
 
 
 ## 📂 Structure
