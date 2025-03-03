@@ -43,8 +43,7 @@ Specify hyperparameters in `config.yaml` and launch training as follows:
 ## 📂 Structure
 ```
 plainLM/
-├── cluster/             # HPC scripts
-│   └── condor/          # Condor job scheduler scripts
+├── cluster/             # HPC scripts (SLURM & Condor)
 ├── config/              # Configuration files for training and model setup
 ├── data/                # Everything regarding data preparation and data stream
 │   └── datasets/        # Data preprocessing files to download, tokenize, chunk and save data
