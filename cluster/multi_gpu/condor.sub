@@ -1,6 +1,6 @@
 
 # Executable should be a full path
-executable=/home/najroldi/plainLM/cluster/condor/multi_gpu/condor.sh
+executable=/home/najroldi/plainLM/cluster/condor/condor.sh
 
 # Hyperparmeters are specified in a YAML configuration file
 config=config/config.yaml
