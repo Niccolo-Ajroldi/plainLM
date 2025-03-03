@@ -1,22 +1,23 @@
 
-# Define variables
-# NOTE: executable should be a full path
-LOGS_DIR=/fast/najroldi/logs/llm
-executable=/home/najroldi/llm_pretrain/cluster/condor/single_gpu/run.sh
+# Executable should be a full path
+executable=/home/najroldi/plainLM/cluster/condor/single_gpu/condor.sh
 
-# Job specific vars
+# Hyperparmeters are specified in a YAML configuration file
 config=config/config.yaml
+
+# Queue as many jobs as points in the hyperaparameter grid
 n_jobs=1
 
-# Args
+# Pass arguments to the executable
 arguments = $(config) $(Process)
 
 # Logs
+LOGS_DIR=/fast/najroldi/logs/plainLM
 error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
 output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
 log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 
-# Specs
+# Job requirements
 request_memory = 250000
 request_cpus = 12
 request_gpus = 1

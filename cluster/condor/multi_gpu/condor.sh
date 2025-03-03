@@ -1,7 +1,7 @@
 #!/bin/bash
 
-source ~/miniconda3/etc/profile.d/conda.sh
-conda activate ssm
+source ~/miniforge3/etc/profile.d/conda.sh
+conda activate plainLM
 
 # Job specific vars
 config=$1
@@ -9,6 +9,6 @@ job_idx=$2 # CONDOR job arrays range from 0 to n-1
 
 # Execute python script
 torchrun \
-  --redirects 1:0,2:0,3:0,4:0,5:0,6:0,7:0 \
-  --standalone --nnodes=1 --nproc_per_node=8 \
+  --redirects 1:0,2:0,3:0 \
+  --standalone --nnodes=1 --nproc_per_node=4 \
   train.py --config=$config --job_idx=$job_idx
