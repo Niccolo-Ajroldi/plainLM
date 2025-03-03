@@ -6,6 +6,13 @@ It supports distributed training via Distributed Data Parallel (DDP).
 
 A dedicated script is included for downloading, tokenizing, and chunking data, making data preparation seamless.
 
+## 🛠 Installation
+We recommend running `plainLM` in a dedicated Python environment. To install dependencies in an Anaconda environment, execute:
+```bash
+conda create --name plainLM python=3.13 -y && conda activate plainLM
+pip install -r requirements.txt
+```
+
 ## ⚡️ Usage
 
 Specify hyperparameters in `config.yaml` and launch training as follows:
@@ -59,5 +66,5 @@ plainLM/
 - add dummy data
 - send eval results when log_every is not a multiple of eval every + better logger
 - FSDP2 support
-- add tests
+- add unit tests
 
