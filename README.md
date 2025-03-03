@@ -59,7 +59,7 @@ plainLM/
 ```
 
 ## ☑️ TODO
-- SLURM support
+- test SLURM support
 - improve readibility in data loading
 - add seed to `DistributedSampler`
 - add `LinearCooldown` compatible with `WarmupConstant`
