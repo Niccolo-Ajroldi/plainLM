@@ -64,7 +64,7 @@ plainLM/
 
 ## ☑️ TODO
 - dummy data
-- FSDP2 support
+- FSDP2 support, ZeRO-2 and tensor parallel compatibility
 - unit tests
 - improve readibility in data loading
 - add seed to `DistributedSampler`
