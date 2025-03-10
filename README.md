@@ -80,7 +80,7 @@ See [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) for details.
 ```bibtex
 @misc{ajroldi2025plainlm,
   author = {Niccolò Ajroldi},
-  title = {plainLM: Minimal pretraining script for language modeling in PyTorch},
+  title = {plainLM: A Minimal Language Modeling Pretraining Repository in PyTorch},
   year = {2024},
   howpublished = {\url{https://github.com/Niccolo-Ajroldi/plainLM}}
 }
