@@ -89,7 +89,7 @@ class TorchEngine(torch.nn.Module):
 
 
   def step(self, batch):
-    """Wraps a fwd pass, backwd pass, and optimization step."""
+    """Wraps a fwd pass, bwd pass, and optimization step."""
     
     self.model.train()
     
