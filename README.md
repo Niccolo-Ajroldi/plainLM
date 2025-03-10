@@ -72,8 +72,7 @@ plainLM/
 - send eval results when log_every is not a multiple of eval every + better logger
 
 ## License
-This project is licensed under the **Creative Commons Attribution 4.0 International (CC BY 4.0)**.  
-See [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) for details.
+This project is licensed under the **Creative Commons Attribution 4.0 International (CC BY 4.0)** License. See the [LICENSE](LICENSE) file or visit [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) for details.
 
 
 ## Citation
