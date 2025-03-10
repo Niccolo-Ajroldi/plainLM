@@ -79,6 +79,7 @@ plainLM/
   year = {2024},
   howpublished = {\url{https://github.com/Niccolo-Ajroldi/plainLM}}
 }
+```
 
 ## Credits
 This project was inspired by and includes code from:  
