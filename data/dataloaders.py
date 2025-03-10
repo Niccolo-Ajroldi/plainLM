@@ -13,7 +13,7 @@ from data.datasamplers import StatefulSequentialSampler, StatefulDistributedSamp
 
 
 def get_dataloaders(cfg, start_step: int = 0):
-  """Load trainset and perhaos validset. Returns correspondent DataLoaders."""
+  """Load trainset and perhaps validset. Returns correspondent DataLoaders."""
   
   train_set = load_from_disk(cfg.trainset_path)
   if not isinstance(train_set , Dataset):
