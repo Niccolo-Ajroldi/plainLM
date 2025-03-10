@@ -71,3 +71,11 @@ plainLM/
 - add `LinearCooldown` compatible with `WarmupConstant`
 - send eval results when log_every is not a multiple of eval every + better logger
 
+## Citation
+```bibtex
+@misc{ajroldi2025plainlm,
+  author = {Niccolò Ajroldi},
+  title = {plainLM: Minimal pretraining script for language modeling in PyTorch},
+  year = {2024},
+  howpublished = {\url{https://github.com/Niccolo-Ajroldi/plainLM}}
+}
