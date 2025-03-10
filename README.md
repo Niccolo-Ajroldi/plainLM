@@ -71,6 +71,11 @@ plainLM/
 - add `LinearCooldown` compatible with `WarmupConstant`
 - send eval results when log_every is not a multiple of eval every + better logger
 
+## License
+This project is licensed under the **Creative Commons Attribution 4.0 International (CC BY 4.0)**.  
+See [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) for details.
+
+
 ## Citation
 ```bibtex
 @misc{ajroldi2025plainlm,
@@ -79,3 +84,4 @@ plainLM/
   year = {2024},
   howpublished = {\url{https://github.com/Niccolo-Ajroldi/plainLM}}
 }
+
