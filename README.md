@@ -81,7 +81,7 @@ plainLM/
 }
 ```
 
-#### Credits
+## Credits
 This project was inspired by:  
 - [Cramming](https://github.com/JonasGeiping/cramming) by Jonas Geiping
 - [GPT-NeoX](https://github.com/EleutherAI/gpt-neox) by EleutherAI
