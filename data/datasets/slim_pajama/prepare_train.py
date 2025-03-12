@@ -83,9 +83,14 @@ print("Tokenize")
 #   Warming: Special tokens have been added in the vocabulary, 
 #   make sure the associated word embeddings are fine-tuned or trained.
 tokenizer = AutoTokenizer.from_pretrained('EleutherAI/gpt-neox-20b')
-def tokenize_function(examples):
+def tokenize_function(examples: Dict[str, List[Any]]) -> Dict[str, List[Any]]:
   add_eos = lambda seq: (seq + tokenizer.eos_token) if seq else seq
   add_eos_batched = lambda seqs: [add_eos(seq) for seq in seqs]
+  return tokenizer(
+        add_eos_batched(examples["text"]),  # examples is a dictionary of lists (not a list of dictionaries!)
+        return_special_tokens_mask=False, 
+        return_attention_mask=False
+  )
   tokenize = lambda example: tokenizer(
     add_eos_batched(example), 
     return_special_tokens_mask=False, 
@@ -118,7 +123,7 @@ print("Concatenating in chunks of max_seq_len")
 
 # Main data processing function that will concatenate all texts 
 # from tokenized dataset and generate chunks of max_seq_length.
-def group_texts(examples):
+def group_texts(examples: Dict[str, List[Any]]) -> Dict[str, List[Any]]:
     # Concatenate all texts.
     concatenated_examples = {k: list(chain(*examples[k])) for k in examples.keys()}
     total_length = len(concatenated_examples[list(examples.keys())[0]])
