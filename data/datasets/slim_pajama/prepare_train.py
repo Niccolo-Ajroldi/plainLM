@@ -91,12 +91,6 @@ def tokenize_function(examples: Dict[str, List[Any]]) -> Dict[str, List[Any]]:
         return_special_tokens_mask=False, 
         return_attention_mask=False
   )
-  tokenize = lambda example: tokenizer(
-    add_eos_batched(example), 
-    return_special_tokens_mask=False, 
-    return_attention_mask=False
-  )
-  return tokenize(examples["text"])
 
 tokenizer.model_max_length = 1e30 # maximum number of tokens that the model can handle in a single input sequence
 tokenized_datasets = dataset.map(
