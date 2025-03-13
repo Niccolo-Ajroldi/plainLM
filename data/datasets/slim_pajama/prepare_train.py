@@ -117,6 +117,9 @@ print("Concatenating in chunks of max_seq_len")
 
 # Main data processing function that will concatenate all texts 
 # from tokenized dataset and generate chunks of max_seq_length.
+# NOTE: the current approach leads to data loss at batch boundaries,
+#       however concatenation is not possible with this function if batched=False, 
+#       sinve concat_chunck relies on processing multiple examples at once to concatenate them.
 def group_texts(examples: Dict[str, List[Any]]) -> Dict[str, List[Any]]:
     # Concatenate all texts.
     concatenated_examples = {k: list(chain(*examples[k])) for k in examples.keys()}
