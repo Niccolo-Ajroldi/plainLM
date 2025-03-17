@@ -19,7 +19,7 @@ config=config/config.yaml
 # SLURM job arrays range from 1 to n
 job_idx=$((SLURM_ARRAY_TASK_ID - 1))
 
-# Execute python script
+# Launch torch distributed run on 8 devices
 torchrun \
   --redirects 1:0,2:0,3:0,4:0,5:0,6:0,7:0 \
   --standalone --nnodes=1 --nproc_per_node=8 \
