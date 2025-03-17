@@ -75,7 +75,7 @@ plainLM/
 ```bibtex
 @misc{ajroldi2025plainlm,
   author = {Niccolò Ajroldi},
-  title = {plainLM: Lightweight Language Model Pretraining in PyTorch},
+  title = {plainLM: Simple Language Model Pretraining in PyTorch},
   year = {2024},
   howpublished = {\url{https://github.com/Niccolo-Ajroldi/plainLM}}
 }
