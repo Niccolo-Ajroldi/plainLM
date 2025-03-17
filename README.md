@@ -86,4 +86,5 @@ This project was inspired by:
 - [Cramming](https://github.com/JonasGeiping/cramming) by Jonas Geiping
 - [GPT-NeoX](https://github.com/EleutherAI/gpt-neox) by EleutherAI
 - [NanoGPT](https://github.com/karpathy/nanoGPT) by Andrej Karpathy
-Huge thanks to these projects for their contributions to open-source language model pretraining.
+
+Huge thanks to these projects for their contributions to open-source language model pretraining!
