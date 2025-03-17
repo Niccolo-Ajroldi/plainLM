@@ -1,0 +1,74 @@
+# NOTE: this fits on 8xA100-80GB.
+# If you wish to run on less GPU, make sure to decrease the micro_batch_size
+# and increase the number of accumulation steps.
+
+torch_compile: True
+num_workers: 2
+seed: 100
+
+sampler: 'sequential'
+sampler_seed: null
+
+# model
+model: 'transformer'
+d_model: 1024
+expand: '8/3'
+n_layers: 24
+n_heads: 16
+mlp_class: 'gmlp'
+tie_embeddings: False
+
+dataset_path: "/fast/najroldi/data/lm/slim_pajama/new_sp_15B_tokens"
+vocab_size: 50280
+seq_len: 2048
+
+eval: True
+validset_path: "/fast/najroldi/data/lm/slim_pajama/valid/validation"
+eval_every_micro_steps: 600
+
+# note 1: this is micro batch size if grad_accumulation_steps>1
+# note 2: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
+micro_batch_size: 8
+grad_accumulation_steps: 4
+
+# note: choose between {float32, float16, bfloat16}
+# note: float16 data type will automatically use a GradScaler
+dtype: 'bfloat16'
+
+# set one of the two
+time_budget_sec: null
+steps_budget: 13500 # = n_tokens/(seq_len * micro_batch_size * grad_accumulation_steps) = 2.5B/(2048*32*8)
+
+optim: 'adamw'
+fused_optim: True
+lr: 0.003
+weight_decay: 0.1
+beta1: 0.9
+beta2: 0.95
+grad_clip: 1.0
+
+scheduler: 'warm_cos'
+warmup_steps: 0.1
+cooldown_steps: null
+lr_start: 0.0
+lr_end: 1.e-5
+lr_end_pct: null
+
+log_every_micro_steps: 120
+print_progress: False
+
+use_wandb: True
+wandb_watch: False
+wandb_project: 'ngn'
+wandb_run_name: 'tr_420M_redo'
+exp_name: 'tr_420M_redo'
+
+resume: False
+resume_micro_step: null
+resume_exp_name: null
+
+save_last_checkpoint: True
+save_intermediate_checkpoints: True
+save_every_micro_steps: 2_000
+out_dir: '/fast/najroldi/exp/ssm'
+over_write: True
