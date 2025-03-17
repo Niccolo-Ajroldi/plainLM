@@ -20,7 +20,7 @@ log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 # Job requirements
 request_memory = 500000
 request_cpus = 32
-request_gpus = 4
+request_gpus = 8
 requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
 
 queue $(n_jobs)
