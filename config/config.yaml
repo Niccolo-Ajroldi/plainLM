@@ -1,7 +1,7 @@
 ## CONFIG file
 ## change paths with your own!
 
-determinisitc: False
+deterministic: False
 seed: 100
 
 trainset_path: "/fast/najroldi/data/lm/slim_pajama/new_sp_15B_tokens/train"
