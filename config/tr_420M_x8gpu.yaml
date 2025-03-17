@@ -37,7 +37,7 @@ dtype: 'bfloat16'
 
 # set one of the two
 time_budget_sec: null
-steps_budget: 13500 # = n_tokens/(seq_len * micro_batch_size * grad_accumulation_steps) = 2.5B/(2048*32*8)
+steps_budget: 13500 # = n_tokens/(seq_len * micro_batch_size * grad_accumulation_steps)
 
 optim: 'adamw'
 fused_optim: True
