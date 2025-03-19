@@ -73,9 +73,9 @@ plainLM/
 
 ## Citation
 ```bibtex
-@misc{ajroldi2025plainlm,
+@misc{ajroldi2024plainlm,
   author = {Niccolò Ajroldi},
-  title = {plainLM: Simple Language Model Pretraining in PyTorch},
+  title = {plainLM: Language Model Pretraining in PyTorch},
   year = {2024},
   howpublished = {\url{https://github.com/Niccolo-Ajroldi/plainLM}}
 }
