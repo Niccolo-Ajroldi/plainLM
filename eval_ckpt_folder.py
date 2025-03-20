@@ -14,6 +14,7 @@ from torch import distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader, SequentialSampler
 
+import avg
 import utils
 from utils import print_master
 from torch_utils import pytorch_setup, destroy_ddp
@@ -57,6 +58,9 @@ def main(_):
 
   # Engine
   engine = TorchEngine(model, cfg, device, local_rank, ckpt=None)
+
+  # Init Averaging Tool
+  avg_tool = avg.LAWA()
 
   # List checkpoints in the folder
   ckpt_folder = cfg.eval_ckpt_folder
