@@ -16,7 +16,8 @@ def intialize_optimizer(param_groups, cfg):
       lr=cfg.lr,
       betas=[cfg.beta1, cfg.beta2],
       weight_decay=cfg.weight_decay,
-      fused=cfg.fused_optim, 
+      fused=cfg.fused_optim,
+      eps=getattr(cfg, 'eps', 1e-8)
     )
   
   elif cfg.optim == 'nadamw':
@@ -26,7 +27,8 @@ def intialize_optimizer(param_groups, cfg):
       betas=[cfg.beta1, cfg.beta2],
       weight_decay=cfg.weight_decay,
       decoupled_weight_decay=True,
-      fused=cfg.fused_optim, 
+      fused=cfg.fused_optim,
+      eps=getattr(cfg, 'eps', 1e-8)
     )
   
   elif cfg.optim == 'sgd':

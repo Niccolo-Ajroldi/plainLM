@@ -51,6 +51,17 @@ def init_wandb(cfg):
   )
 
 
+def log_job_info(FLAGS):
+  """Logs info about cluster job."""
+  if FLAGS.job_cluster is not None and FLAGS.job_idx is not None:
+    print(f'JOB_CLUSER = {FLAGS.job_cluster}')
+    print(f'JOB_INDEX = {FLAGS.job_idx}')
+    print(f'JOB_ID = {FLAGS.job_cluster}.{FLAGS.job_idx}')
+    wandb.log({'JOB_CLUSTER': FLAGS.job_cluster})
+    wandb.log({'JOB_INDEX': FLAGS.job_idx})
+    wandb.log({'JOB_ID': f"{FLAGS.job_cluster}.{FLAGS.job_idx}",})
+
+
 def maybe_make_dir(cfg, job_idx=None):
   """Creates an experiment directory if checkpointing is enabled"""
   if not cfg.save_intermediate_checkpoints and not cfg.save_last_checkpoint:

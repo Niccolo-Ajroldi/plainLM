@@ -49,7 +49,6 @@ class WSD(object):
     self.cooldown_start_step = cooldown_start_step
     self.cooldown_steps = cooldown_steps
     self.iter = 0
-    
     for group in self.optimizer.param_groups:
       group["lr"] = lr_start
 
