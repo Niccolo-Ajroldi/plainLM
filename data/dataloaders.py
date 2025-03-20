@@ -23,13 +23,13 @@ def get_dataloaders(cfg, start_step: int = 0):
   
   trainloader = DataLoader(
     train_set,
-    sampler = sampler,
-    batch_size = cfg.micro_batch_size,
-    num_workers = cfg.num_workers,
-    pin_memory = True,
-    # drop_last = True, # raise error when True and batch_size is specified
-    prefetch_factor = 2 if cfg.num_workers > 0 else None,
-    persistent_workers = True if cfg.num_workers > 0 else False,
+    sampler=sampler,
+    batch_size=cfg.micro_batch_size,
+    num_workers=cfg.num_workers,
+    pin_memory=True,
+    # drop_last=True, # raise error when True and batch_size is specified
+    prefetch_factor=2 if cfg.num_workers > 0 else None,
+    persistent_workers=True if cfg.num_workers > 0 else False,
   )
   
   if not cfg.validset_path:
@@ -46,9 +46,14 @@ def get_dataloaders(cfg, start_step: int = 0):
       
     validloader = DataLoader(
       valid_set,
-      batch_size = cfg.micro_batch_size,
-      num_workers = cfg.num_workers,
-      sampler = valid_sampler,
+      batch_size=cfg.micro_batch_size,
+      drop_last=True,  # makes eval with DDP easier
+      shuffle=False,
+      sampler=valid_sampler,
+      num_workers=cfg.num_workers,
+      pin_memory=True,
+      prefetch_factor=2 if cfg.num_workers > 0 else None,
+      persistent_workers=False,
     )
   
   return trainloader, validloader

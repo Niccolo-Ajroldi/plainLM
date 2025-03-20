@@ -25,6 +25,7 @@ def main(_):
   
   if master_process:
     utils.maybe_make_dir(cfg, JOB_IDX)
+    utils.log_job_info(FLAGS)
 
   if cfg.use_wandb and master_process:
     utils.init_wandb(cfg)
