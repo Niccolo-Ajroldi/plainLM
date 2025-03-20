@@ -36,10 +36,11 @@ def pytorch_setup(cfg):
   random.seed(cfg.seed + seed_offset)
   np.random.seed(cfg.seed + seed_offset)
   torch.manual_seed(cfg.seed + seed_offset)
-  
-  # allow TF32
-  torch.backends.cuda.matmul.allow_tf32 = getattr(cfg, 'cuda_allow_tf32', False)
-  torch.backends.cudnn.allow_tf32 = getattr(cfg, 'cudnn_allow_tf32', False)
+
+  # allow TF32, if not specified, we follow PyTorch 2.0 default
+  # https://pytorch.org/docs/stable/notes/cuda.html#tf32-on-ampere
+  torch.backends.cuda.matmul.allow_tf32 = getattr(cfg, 'cuda_matmul_allow_tf32', False)
+  torch.backends.cudnn.allow_tf32 = getattr(cfg, 'cudnn_allow_tf32', True)
 
   # limit CUDA memory
   if hasattr(cfg, 'set_memory_fraction'):
