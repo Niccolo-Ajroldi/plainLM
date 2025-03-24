@@ -20,30 +20,35 @@ USE_PYTORCH_DDP = dist._is_initalized()
 
 
 class LAWA():
-  def __init__(self, cfg, step_budget) -> None:
+  """
+  A class to store LAWA queue and compute the running average.
+  We store both the queue and the running average.
+  Queue lays on CPU, running avg on CUDA.
+  """
+
+  def __init__(self, cfg) -> None:
     self.maxlen = int(cfg.lawa_queue_len)
     self.queue = deque(maxlen=self.maxlen)
     self.running_avg = None
 
-    self.start_step = math.ceil(step_budget * cfg.lawa_burnin_pct)
+    self.start_step = math.ceil(cfg.step_budget * cfg.lawa_burnin_pct)
 
     has_pct = getattr(cfg, "lawa_every_pct", None) is not None
     has_step = getattr(cfg, "lawa_every_steps", None) is not None
     if not has_pct and not has_step:
       raise ValueError("Missing hyperparameter: lawa_every_steps or lawa_every_pct")
     if has_step and has_pct:
-      raise ValueError("Both lawa_every_steps and lawa_every_pct are defined")
-
+      raise ValueError("Define either lawa_every_pct or lawa_every_steps, not both.")
     if has_step:
       self.every_step = int(cfg.lawa_every_steps)
     else:
-      self.every_step = math.ceil(step_budget * cfg.lawa_every_pct)
-    print('=== Running LAWA with self.every_step = %d ===', self.every_step)
+      self.every_step = math.ceil(cfg.step_budget * cfg.lawa_every_pct)
+    print('=== Using LAWA with self.every_step = %d ===', self.every_step)
 
   def append(self, params):
     new_params = [p.detach().cpu() for p in params]
 
-    # Remove oldest element from the running avg
+    # Subtract oldest element from the running avg
     if self.full():
       removed_params = self.queue[0]
       for avg, removed_p in zip(self.running_avg, removed_params):
@@ -56,7 +61,7 @@ class LAWA():
       for avg, new_p in zip(self.running_avg, new_params):
         avg.add_(new_p.div(self.maxlen))
 
-    # append pushes the new element into the queue and pops the oldest
+    # append pushes the new params and pops the oldest
     self.queue.append(new_params)
 
   def full(self):
@@ -64,7 +69,7 @@ class LAWA():
 
   def avg(self):
     """Returns the average tensor, which lays on CPU."""
-    k = float(self.maxlen)
+    k = float(self.maxlen) 
 
     # Initialize avg with first element of the queue
     q_avg = [p.clone().div_(k) for p in self.queue[0]] # self.queue[0] is already on cpu!
@@ -75,7 +80,7 @@ class LAWA():
         p_avg.add_(p/k)
 
     return q_avg
-  
+
   def state_dict(self):
     return {key: value for key, value in self.__dict__.items()}
 

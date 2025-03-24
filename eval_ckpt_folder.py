@@ -56,11 +56,8 @@ def main(_):
     print(model_cfg)
     print(model)
 
-  # Engine
-  engine = TorchEngine(model, cfg, device, local_rank, ckpt=None)
-
-  # Init Averaging Tool
-  avg_tool = avg.LAWA()
+  # AvgEngine
+  avg_engine = avg.AvgEngine(model, cfg, device, local_rank, ckpt=None)
 
   # List checkpoints in the folder
   ckpt_folder = cfg.eval_ckpt_folder
@@ -70,33 +67,31 @@ def main(_):
   checkpoints = [f for f in os.listdir(ckpt_folder) if re.match(rf"^{prefix}\d+\.pth$", f)]
   checkpoints.sort(key=lambda x: int(x[len(prefix):-4]))  # Sort numerically
   print_master(f"Found {len(checkpoints)} checkpoints in {ckpt_folder}")
-
-  # Loop through checkpoints
   print_master(f"=== Eval Loop Started! ===")
-  for ckpt_file in checkpoints:
-    print_master(f"Checkpoint: {ckpt_file}")
 
-    # Read checkpoint from disk
-    ckpt_path = os.path.join(ckpt_folder, ckpt_file)
-    ckpt = torch.load(ckpt_path, map_location=device, weights_only=True)
+  # Start eval when we have at least one model in the avg buffer
+  s = avg_engine.avg_start_step
+  e = avg_engine.avg_every_steps
+  eval_start_step = ((s // e) + 1) * e
 
-    micro_step = ckpt['micro_step']
-    step = micro_step // cfg.grad_accumulation_steps
-  
-    # Load checkpoint
-    state_dict = {"_orig_mod.module." + k: v for k, v in ckpt['state_dict'].items()}
-    engine.model.load_state_dict(state_dict)
-    engine.optimizer.load_state_dict(ckpt['optimizer'])
-    engine.scheduler.load_state_dict(ckpt['scheduler'])
-    if 'scaler' in ckpt:
-      engine.scaler.load_state_dict(ckpt['scaler'])
+  for step in range(cfg.step_budget):
+
+    micro_step = step * cfg.grad_accumulation_steps
+    ckpt_file = f"{prefix}{micro_step}.pth"
+    if ckpt_file in checkpoints:
+      print_master(f"Found Checkpoint: {ckpt_file}")
+      ckpt_path = os.path.join(ckpt_folder, ckpt_file)
+      avg_engine.maybe_update_buffer(ckpt_path, step)
 
     # Eval
-    valid_loss = engine.eval(validloader)
-    valid_ppl = math.exp(valid_loss)
+    valid_loss = None
+    if cfg.eval and step % cfg.eval_every_steps == 0 and step >= eval_start_step:
+      print_master("Evaluating on validation set")
+      avg_engine.prepare_for_eval()
+      valid_loss = avg_engine.eval(validloader)
 
-    # Log
-    if master_process:
+    # Log TODO: better
+    if step % cfg.log_every_steps == 0 and master_process:
       print_master(f'micro_step: {micro_step} | step: {step} | valid/loss: {valid_loss:.3e} | valid/ppl: {valid_ppl:.3e}')
       if cfg.use_wandb:
         wandb.log({'micro_step': micro_step, 'step': step, 'valid/loss': valid_loss, 'valid/ppl': valid_ppl})
