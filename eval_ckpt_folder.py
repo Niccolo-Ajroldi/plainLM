@@ -89,12 +89,10 @@ def main(_):
       print_master("Evaluating on validation set")
       avg_engine.prepare_for_eval()
       valid_loss = avg_engine.eval(validloader)
-
-    # Log TODO: better
-    if step % cfg.log_every_steps == 0 and master_process:
-      print_master(f'micro_step: {micro_step} | step: {step} | valid/loss: {valid_loss:.3e} | valid/ppl: {valid_ppl:.3e}')
-      if cfg.use_wandb:
-        wandb.log({'micro_step': micro_step, 'step': step, 'valid/loss': valid_loss, 'valid/ppl': valid_ppl})
+      valid_ppl = math.exp(valid_loss)
+      print_master(f'step: {step} | valid/loss: {valid_loss:.3e} | valid/ppl: {valid_ppl:.3e}')
+      if master_process and cfg.use_wandb:
+        wandb.log({'step': step, 'valid/loss': valid_loss, 'valid/ppl': valid_ppl})
 
   # End of evals
   print_master(f"=== Eval Loop Completed! ===")
