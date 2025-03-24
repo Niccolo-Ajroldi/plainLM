@@ -13,6 +13,7 @@ from engine import TorchEngine
 
 flags.DEFINE_string('config', 'config/config.yaml', 'Path to config.yaml file.')
 flags.DEFINE_integer('job_idx', None, 'Job idx for job-array sweeps. From 0 to n-1.')
+flags.DEFINE_integer('job_cluster', None, 'Job cluster ID.')
 FLAGS = flags.FLAGS
 
 

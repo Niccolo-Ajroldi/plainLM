@@ -1,0 +1,26 @@
+
+# Define variables
+LOGS_DIR=/fast/najroldi/logs/wa_lm
+executable=/home/najroldi/plainLM/cluster/gpux2/condor.sh
+
+# Job specific vars
+config=config/30M/save_ckpt.yaml
+n_jobs=1
+
+# Args
+arguments = $(config) $(Process) $(Cluster)
+
+# Logs
+error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Specs
+request_memory = 200000
+request_cpus = 8
+request_gpus = 2
+requirements = (TARGET.CUDACapability >= 8.0) && (TARGET.Machine != "g125.internal.cluster.is.localnet")
+# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g125.internal.cluster.is.localnet")
+# requirements =  (TARGET.CUDACapability >= 8.0) && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB")
+
+queue $(n_jobs)
