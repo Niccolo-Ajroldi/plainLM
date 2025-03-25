@@ -1,5 +1,7 @@
 
+from torch.nn.parallel import DistributedDataParallel as DDP
 import torch
+
 from avg.avg import AvgEngine
 
 
@@ -24,13 +26,17 @@ class EWAOffline(AvgEngine):
     beta = self.beta
     if step >= self.avg_start_step and step % self.avg_every_steps == 0:
 
+      print(f"Update EMA")
+
       # Load checkpoint in CUDA
       ckpt = torch.load(ckpt_path, map_location=self.device, weights_only=True)
-      state_dict = {"_orig_mod.module." + k: v for k, v in ckpt['state_dict'].items()}
-
+      state_dict = ckpt['state_dict']
+      if isinstance(self.model, DDP):
+        state_dict = {"module." + k: v for k, v in state_dict.items()}
+      
       # Update EMA
       for n, p in self.model.named_parameters():
-        p.mul_(beta).add_(state_dict[n], 1 - beta)
+        p.mul_(beta).add_(state_dict[n], alpha=1-beta)
 
 
   @torch.no_grad()

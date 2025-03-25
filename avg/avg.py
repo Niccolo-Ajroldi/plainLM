@@ -38,8 +38,19 @@ class AvgEngine(torch.nn.Module):
     if torch.distributed.is_initialized():
       self.model = DDP(self.model, device_ids=[local_rank])
 
-    # Avg hyperparameters
-    self.avg_start_step = cfg.step_budget * getattr(cfg, "avg_burnin_pct", 0.0)
+    # Avg start
+    has_pct = getattr(cfg, "avg_burnin_pct", None) is not None
+    has_step = getattr(cfg, "avg_start_step", None) is not None
+    if not has_pct and not has_step:
+      raise ValueError("Missing hyperparameter: avg_burnin_pct or avg_start_step")
+    if has_step and has_pct:
+      raise ValueError("Both avg_burnin_pct and avg_start_step are defined")
+    if has_step:
+      self.avg_start_step = int(cfg.avg_start_step)
+    else:
+      self.avg_every_steps = cfg.steps_budget * getattr(cfg, "avg_burnin_pct", 0.0)
+
+    # Avg freq
     has_pct = getattr(cfg, "avg_every_pct", None) is not None
     has_step = getattr(cfg, "avg_every_steps", None) is not None
     if not has_pct and not has_step:
@@ -49,7 +60,7 @@ class AvgEngine(torch.nn.Module):
     if has_step:
       self.avg_every_steps = int(cfg.avg_every_steps)
     else:
-      self.avg_every_steps = math.ceil(cfg.step_budget * cfg.avg_every_pct)
+      self.avg_every_steps = math.ceil(cfg.steps_budget * cfg.avg_every_pct)
 
 
   @abc.abstractmethod

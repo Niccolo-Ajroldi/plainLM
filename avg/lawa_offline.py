@@ -2,7 +2,7 @@
 from collections import deque
 
 import torch
-from torch import distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 from avg.avg import AvgEngine
 
@@ -31,11 +31,13 @@ class LAWAOffline(AvgEngine):
     """Update LAWA from a ckpt_path."""
     if step >= self.avg_start_step and step % self.avg_every_steps == 0:
 
+      print(f"Updating LAWA")
+
       # Load checkpoint on CPU
       ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=True)
       state_dict = ckpt['state_dict']
-      if dist.is_initialized():  # TODO: check if I need to do it for compiled models as well
-        state_dict = {"_orig_mod.module." + k: v for k, v in state_dict.items()}
+      if isinstance(self.model, DDP):
+        state_dict = {"module." + k: v for k, v in state_dict.items()}
 
       # Write state_dict in a list of params
       new_params = [state_dict[n] for n,_ in self.model.named_parameters()]
@@ -62,5 +64,8 @@ class LAWAOffline(AvgEngine):
     """Load running average (cpu) into the self.model (cuda)."""
     if self.avg is None:
       raise ValueError(f"Evaluating without a model!")
+    print(f"Load avg into model")
     for p, p_avg in zip(self.model.parameters(), self.avg):
-      p.data.copy_(p_avg.data)  # also moves to cuda
+      p.copy_(p_avg.to(p.device))
+
+      # p.data.copy_(p_avg.data)  # also moves to cuda
