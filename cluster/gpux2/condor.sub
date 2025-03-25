@@ -19,8 +19,8 @@ log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 request_memory = 200000
 request_cpus = 8
 request_gpus = 2
-requirements = (TARGET.CUDACapability >= 8.0) && (TARGET.Machine != "g125.internal.cluster.is.localnet")
-# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g125.internal.cluster.is.localnet")
+# requirements = (TARGET.CUDACapability >= 8.0) && (TARGET.Machine != "g125.internal.cluster.is.localnet")
+requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g125.internal.cluster.is.localnet")
 # requirements =  (TARGET.CUDACapability >= 8.0) && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB")
 
 queue $(n_jobs)

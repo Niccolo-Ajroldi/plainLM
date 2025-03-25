@@ -18,14 +18,14 @@ def _latest_checkpoint(ckpt_dir: str, prefix: str = 'checkpoint_') -> str | None
     return os.path.join(ckpt_dir, checkpoints[-1]) if checkpoints else None
 
 
-def save_checkpoint(micro_step, model, engine, cfg, job_idx=None):
+def save_checkpoint(step, model, engine, cfg, job_idx=None):
 
   optimizer = engine.optimizer
   scheduler = engine.scheduler
   scaler = engine.scaler
   
   state = {
-    "micro_step": micro_step,
+    "step": step,
     "state_dict": model.state_dict(),
     "optimizer": optimizer.state_dict(),
     "scheduler": scheduler.state_dict() if scheduler else {},
@@ -36,10 +36,10 @@ def save_checkpoint(micro_step, model, engine, cfg, job_idx=None):
   if job_idx is not None:  # subfolder for each job in the sweep
     exp_dir = os.path.join(exp_dir, f"job_idx_{job_idx}")
     
-  save_path = os.path.join(exp_dir, f'ckpt_micro_step_{micro_step}.pth')
+  save_path = os.path.join(exp_dir, f'ckpt_step_{step}.pth')
   print(f"Saving checkpoint to {save_path}")
   torch.save(state, save_path)
-  print(f"Successfully saved checkpoint!")
+  # print(f"Successfully saved checkpoint!")
 
 
 def maybe_load_checkpoint(cfg, device):
@@ -55,8 +55,8 @@ def maybe_load_checkpoint(cfg, device):
     print(f"Resuming from {ckpt_dir}")
     
     # resume from a specified checkpoint or from the latest
-    if cfg.resume_micro_step is not None:
-      ckpt_path = os.path.join(ckpt_dir, f'ckpt_micro_step_{cfg.resume_micro_step}.pth')
+    if cfg.resume_step is not None:
+      ckpt_path = os.path.join(ckpt_dir, f'ckpt_step_{cfg.resume_step}.pth')
     else:
       ckpt_path = _latest_checkpoint(ckpt_dir, prefix='ckpt_')
     
@@ -64,6 +64,6 @@ def maybe_load_checkpoint(cfg, device):
     print(f"Loading checkpoint from {ckpt_path}")
     
     ckpt = torch.load(ckpt_path, map_location=device)
-    micro_step_start = ckpt['micro_step']
-  
+    micro_step_start = ckpt['step'] * cfg.grad_accumulation_steps
+
   return ckpt, micro_step_start

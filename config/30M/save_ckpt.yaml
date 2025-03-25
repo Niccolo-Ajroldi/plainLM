@@ -30,8 +30,8 @@ steps_budget: 1920
 
 # note 1: this is micro batch size if grad_accumulation_steps>1
 # note 2: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
-micro_batch_size: 128
-grad_accumulation_steps: 1
+micro_batch_size: 64
+grad_accumulation_steps: 4
 
 # note: choose between {float32, float16, bfloat16}
 # note: float16 data type will automatically use a GradScaler
@@ -53,7 +53,7 @@ lr_start: 1.e-10
 lr_end: null
 lr_end_pct: 0.001
 
-log_every_steps: 48
+log_every_steps: 12
 print_progress: False
 
 use_wandb: True
