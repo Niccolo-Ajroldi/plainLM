@@ -60,9 +60,9 @@ use_wandb: True
 wandb_watch: False
 wandb_project: 'wa_lm'
 wandb_dir: '/fast/najroldi/logs/wa_lm/wandb'
-wandb_run_name: 'plainLM_check_01'
-exp_name: 'plainLM_check_01'
-check_existing_wandb_run: True
+wandb_run_name: 'plm_save_best_01'
+exp_name: 'plm_save_best_01'
+check_existing_wandb_run: False
 
 resume: False
 resume_micro_step: null
@@ -70,6 +70,11 @@ resume_exp_name: null
 
 out_dir: '/fast/najroldi/exp/llm'
 save_last_checkpoint: True
-save_intermediate_checkpoints: False
-save_every_steps: null
+save_intermediate_checkpoints: True
+save_every_steps: 12
+
+save_optim: False
+save_scheduler: False
+save_scaler: False
+
 over_write: True

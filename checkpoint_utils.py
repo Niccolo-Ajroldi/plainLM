@@ -23,13 +23,17 @@ def save_checkpoint(step, model, engine, cfg, job_idx=None):
   optimizer = engine.optimizer
   scheduler = engine.scheduler
   scaler = engine.scaler
-  
+
+  save_optim = getattr(cfg, 'save_optim', True)
+  save_scheduler = getattr(cfg, 'save_scheduler', True)
+  save_scaler = getattr(cfg, 'save_scaler', True)
+
   state = {
     "step": step,
     "state_dict": model.state_dict(),
-    "optimizer": optimizer.state_dict(),
-    "scheduler": scheduler.state_dict() if scheduler else {},
-    "scaler": scaler.state_dict()
+    "optimizer": optimizer.state_dict() if save_optim else None,
+    "scheduler": scheduler.state_dict() if scheduler and save_scheduler else {},
+    "scaler": scaler.state_dict() if save_scaler else None,
   }
 
   exp_dir = os.path.join(cfg.out_dir, cfg.exp_name)

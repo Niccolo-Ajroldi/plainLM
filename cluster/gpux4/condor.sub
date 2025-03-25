@@ -1,10 +1,10 @@
 
 # Define variables
 LOGS_DIR=/fast/najroldi/logs/wa_lm
-executable=/home/najroldi/plainLM/cluster/multi_gpu/condor.sh
+executable=/home/najroldi/plainLM/cluster/gpux4/condor.sh
 
 # Job specific vars
-config=config/160M/160M_10B_01.yaml
+config=config/160M/save_best_01.yaml
 n_jobs=1
 
 # Args

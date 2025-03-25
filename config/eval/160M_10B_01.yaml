@@ -6,7 +6,7 @@ cuda_matmul_allow_tf32: True
 cudnn_allow_tf32: True
 
 trainset_path: "/fast/najroldi/data/lm/fineweb/fw_20B_tokens_ctx1024/train"
-vocab_size: 50277
+vocab_size: 50257
 seq_len: 1024
 sampler: 'random'
 sampler_seed: 1996
