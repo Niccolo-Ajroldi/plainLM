@@ -10,6 +10,8 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from engine.engine import _move_to_device
 
+# TODO: add torch compile!!
+
 
 class AvgEngine(torch.nn.Module):
   """A parent abstract module to average weigths."""
@@ -24,6 +26,7 @@ class AvgEngine(torch.nn.Module):
     self.grad_clip = cfg.grad_clip
     self.dtype = cfg.dtype
     self.device = device
+    self.torch_compile = cfg.torch_compile
 
     # AMP
     device_type = 'cuda' if 'cuda' in device else 'cpu'
@@ -37,6 +40,11 @@ class AvgEngine(torch.nn.Module):
     self.model = model.to(device)
     if torch.distributed.is_initialized():
       self.model = DDP(self.model, device_ids=[local_rank])
+
+    # Compile
+    if cfg.torch_compile:
+      print(f"Compiling the model...")
+      self.model = torch.compile(self.model)
 
     # Avg start
     has_pct = getattr(cfg, "avg_burnin_pct", None) is not None

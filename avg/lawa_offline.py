@@ -36,9 +36,19 @@ class LAWAOffline(AvgEngine):
       # Load checkpoint on CPU
       ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=True)
       state_dict = ckpt['state_dict']
+      
+      # # import pdb
+      # # pdb.set_trace()
+
       if isinstance(self.model, DDP):
         state_dict = {"module." + k: v for k, v in state_dict.items()}
 
+      # if self.torch_compile:
+      #   state_dict = {"_orig_mod." + k: v for k, v in state_dict.items()}
+
+      # print(state_dict.keys())
+      # print(self.model.state_dict().keys())
+      
       # Write state_dict in a list of params
       new_params = [state_dict[n] for n,_ in self.model.named_parameters()]
 

@@ -14,7 +14,7 @@ cuda_matmul_allow_tf32: True
 cudnn_allow_tf32: True
 
 trainset_path: "/fast/najroldi/data/lm/fineweb/fw_20B_tokens_ctx1024/train"
-vocab_size: 50257
+vocab_size: 50277
 seq_len: 1024
 sampler: 'random'
 num_workers: 4
@@ -63,7 +63,7 @@ lr_end_pct: 0.001
 log_every_steps: 12
 print_progress: False
 
-use_wandb: True
+use_wandb: False
 wandb_watch: False
 wandb_project: 'wa_lm'
 wandb_dir: '/fast/najroldi/logs/wa_lm/wandb'
