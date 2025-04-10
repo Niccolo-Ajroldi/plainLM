@@ -125,6 +125,7 @@ class TorchEngine(torch.nn.Module):
       if self.grad_clip:
         self.scaler.unscale_(self.optimizer)
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
+        # TODO: consider torch.nn.utils.clip_grad_value_ instead!
 
       # step the optimizer, step the scaler if training in fp16
       self.scaler.step(self.optimizer)
