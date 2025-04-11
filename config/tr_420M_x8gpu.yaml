@@ -36,8 +36,7 @@ grad_accumulation_steps: 4
 dtype: 'bfloat16'
 
 # set one of the two
-time_budget_sec: null
-steps_budget: 13500 # = n_tokens/(seq_len * micro_batch_size * grad_accumulation_steps)
+steps_budget: 16000 # = n_tokens/(seq_len * micro_batch_size * grad_accumulation_steps) [CHINCHILLA]
 
 optim: 'adamw'
 fused_optim: True
