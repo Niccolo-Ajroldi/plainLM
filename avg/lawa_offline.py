@@ -2,8 +2,8 @@
 from collections import deque
 
 import torch
-from torch.nn.parallel import DistributedDataParallel as DDP
 
+from checkpoint_utils import match_state_dict_keys
 from avg.avg import AvgEngine
 
 
@@ -35,37 +35,29 @@ class LAWAOffline(AvgEngine):
 
       # Load checkpoint on CPU
       ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=True)
-      state_dict = ckpt['state_dict']
-      
-      # # import pdb
-      # # pdb.set_trace()
+      ckpt_state_dict = ckpt['state_dict']
 
-      if isinstance(self.model, DDP):
-        state_dict = {"module." + k: v for k, v in state_dict.items()}
+      # match state_dict keys
+      ckpt_state_dict = match_state_dict_keys(ckpt_state_dict, self.model.state_dict())
 
-      # if self.torch_compile:
-      #   state_dict = {"_orig_mod." + k: v for k, v in state_dict.items()}
-
-      # print(state_dict.keys())
-      # print(self.model.state_dict().keys())
-      
       # Write state_dict in a list of params
-      new_params = [state_dict[n] for n,_ in self.model.named_parameters()]
+      new_params = [ckpt_state_dict[n] for n,_ in self.model.named_parameters()]
 
-      # Subtract oldest element from running avg
-      if len(self.queue) == self.maxlen:
-        outdated = self.queue[0]
-        for p_avg, p_outdated in zip(self.avg, outdated):
-          p_avg.sub_(p_outdated.div(self.maxlen))
+      k = self.maxlen
+      if self.avg is None: 
+        self.avg = [p.clone().div(k) for p in new_params]
+      else: 
+        # Subtract oldest element from running avg
+        if len(self.queue) == self.maxlen:
+          old = self.queue[0]
+          for p_avg, p_old in zip(self.avg, old):
+            p_avg.sub_(p_old.div(k))
 
-      # Update running avg with new params
-      if self.avg is None:
-        self.avg = [p.clone() for p in new_params]
-      else:
+        # Update running avg with new params
         for avg, new_p in zip(self.avg, new_params):
-          avg.add_(new_p.div(self.maxlen))
+          avg.add_(new_p.div(k))
 
-      # append pushes the new element into the queue and pops the oldest
+      # append right automatically popleft() when deque has a maxlen set and is full
       self.queue.append(new_params)
 
 
@@ -76,6 +68,5 @@ class LAWAOffline(AvgEngine):
       raise ValueError(f"Evaluating without a model!")
     print(f"Load avg into model")
     for p, p_avg in zip(self.model.parameters(), self.avg):
-      p.copy_(p_avg.to(p.device))
-
+      p.copy_(p_avg.to(p.device))          
       # p.data.copy_(p_avg.data)  # also moves to cuda

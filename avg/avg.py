@@ -1,3 +1,4 @@
+"""Parent abstract class for averaging weights offline."""
 
 import abc
 import math
@@ -14,7 +15,7 @@ from engine.engine import _move_to_device
 
 
 class AvgEngine(torch.nn.Module):
-  """A parent abstract module to average weigths."""
+  """A parent abstract module to average weigths offline."""
 
   def __init__(self, model, cfg, device, local_rank):
     super().__init__()

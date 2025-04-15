@@ -3,18 +3,18 @@ deterministic: False
 seed: 1996
 sampler_seed: 1996
 
-# avg
+# AVG
 eval_ckpt_folder: "/fast/najroldi/exp/llm/plm_14M_save/job_idx_0"
-avg_start_step: 600
-avg_every_steps: 12
+avg_start_step: 0
+avg_every_steps: 24
 avg_scheme: "EWA"
-ewa_beta: 0.0
+ewa_beta: 0.99
 
 cuda_matmul_allow_tf32: True
 cudnn_allow_tf32: True
 
 trainset_path: "/fast/najroldi/data/lm/fineweb/fw_20B_tokens_ctx1024/train"
-vocab_size: 50257
+vocab_size: 50277
 seq_len: 1024
 sampler: 'random'
 num_workers: 4
@@ -30,7 +30,7 @@ n_layers: 6
 n_heads: 4
 mlp_class: 'glu'
 tie_embeddings: True
-torch_compile: True
+torch_compile: False
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps)
 steps_budget: 1920

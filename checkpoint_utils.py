@@ -71,3 +71,33 @@ def maybe_load_checkpoint(cfg, device):
     micro_step_start = ckpt['step'] * cfg.grad_accumulation_steps
 
   return ckpt, micro_step_start
+
+
+def match_state_dict_keys(state_dict, state_dict_orig):
+  """Modifies the keys of 'state_dict' to match the keys of 'state_dict_orig'.
+
+  Takes care of stat_dict discrepancies caused by DDP or torch.compile,
+  drop any prefixes from the state_dict, then add the correct prefixes in the correct order.
+
+  Args:
+      state_dict (dict): dict to modify
+      state_dict_orig (dict): dict to match
+  """
+
+  state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
+  state_dict = {k.replace('_orig_mod.', ''): v for k, v in state_dict.items()}
+  
+  orig_key = next(iter(state_dict_orig.keys()))  # first key of orig state_dict
+  
+  if orig_key.startswith('_orig_mod.module.'):
+    state_dict = {"_orig_mod.module." + k: v for k, v in state_dict.items()}
+  elif orig_key.startswith('_orig_mod.'):
+    state_dict = {"_orig_mod." + k: v for k, v in state_dict.items()}
+  elif orig_key.startswith('module._orig_mod.'):
+    state_dict = {"module._orig_mod." + k: v for k, v in state_dict.items()}
+  elif orig_key.startswith('module.'):
+    state_dict = {"module." + k: v for k, v in state_dict.items()}
+
+  return state_dict
+  
+  
