@@ -73,7 +73,7 @@ def main(_):
 
   print_master(f"=== Eval Loop Started! ===")
 
-  for step in range(cfg.steps_budget):
+  for step in range(cfg.steps_budget+1):  # +1 to allow eval at the end
 
     ckpt_file = f"{prefix}{step}.pth"
     if ckpt_file in checkpoints:
