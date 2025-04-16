@@ -6,11 +6,7 @@ from torch import distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader, SequentialSampler, RandomSampler
 
-from data.datasamplers import StatefulSequentialSampler, StatefulDistributedSampler
-
-# TODO: add seed to DistributedSampler
-# TODO: improve readibility of _get_sampler
-
+from data.datasamplers import StatefulSequentialSampler, StatefulRandomSampler, StatefulDistributedSampler
 
 DDP = dist.is_initialized()
 
@@ -67,9 +63,10 @@ def _get_sampler(train_set, cfg, start_step):
   Options:
     - random sampler
     - sequential sampler
+    - stateful random sampler
     - stateful sequential sampler
   We implement "stateful" sequential samplers for resuming training from a specified step.
-  """  
+  """
   if cfg.sampler == "random":
     if DDP:
       sampler = DistributedSampler(train_set, shuffle=True, seed=cfg.sampler_seed, drop_last=True)
@@ -82,10 +79,22 @@ def _get_sampler(train_set, cfg, start_step):
     else:
       sampler = SequentialSampler(train_set)
 
+  elif cfg.sampler == "stateful_random":
+    micro_step_start = cfg.resume_step * cfg.grad_accumulation_steps if cfg.resume else 0
+    if DDP:
+      # TODO: allow support for drop_last=True!
+      sampler = StatefulDistributedSampler(
+        train_set, batch_size=cfg.micro_batch_size, shuffle=True, seed=cfg.sampler_seed, start_iter=micro_step_start
+      )
+    else:
+      sampler = StatefulRandomSampler(
+        train_set, batch_size=cfg.micro_batch_size, shuffle=True, seed=cfg.sampler_seed, start_idx=micro_step_start
+      )
+
   elif cfg.sampler == "stateful_sequential":
     micro_step_start = cfg.resume_step * cfg.grad_accumulation_steps if cfg.resume else 0
     if DDP:
-      sampler = StatefulDistributedSampler(train_set, batch_size=cfg.micro_batch_size, seed=cfg.sampler_seed, drop_last=True, start_iter=micro_step_start)
+      raise NotImplementedError("StatefulDistributedSampler currently needs a seed.")
     else:
       sampler = StatefulSequentialSampler(train_set, batch_size=cfg.micro_batch_size, start_idx=micro_step_start)
   

@@ -4,9 +4,9 @@ DataSampler, from:
 - https://github.com/facebookresearch/vissl/blob/main/vissl/data/data_helper.py#L93
 """
 
+from typing import Sized, Optional
 import numpy as np
 import torch
-from typing import Sized
 
 from torch.utils.data import Sampler
 from torch.utils.data.distributed import DistributedSampler
@@ -29,7 +29,33 @@ class StatefulSequentialSampler(Sampler):
         return iter(range(self.start_idx, len(self.data_source)))
 
     def __len__(self):
-        return len(self.data_source)
+        return len(self.data_source) - self.start_idx
+
+
+class StatefulRandomSampler(Sampler):
+    """Samples elements sequentially or shuffled, with optional start offset."""
+
+    def __init__(self, data_source: Sized, batch_size: int, start_idx: int = 0,
+                 shuffle: bool = False, seed: Optional[int] = None):
+        if shuffle and seed is None:
+            raise ValueError("Seed must be set if shuffle is True in a stateful sampler.")
+        self.data_source = data_source
+        self.batch_size = batch_size
+        self.start_idx = start_idx * batch_size
+        self.shuffle = shuffle
+        self.seed = seed
+
+    def __iter__(self):
+        n = len(self.data_source)
+        indices = list(range(n))
+        if self.shuffle:
+            g = torch.Generator()
+            g.manual_seed(self.seed)
+            indices = torch.randperm(n, generator=g).tolist()
+        return iter(indices[self.start_idx:])
+
+    def __len__(self):
+        return len(self.data_source) - self.start_idx
 
 
 class StatefulDistributedSampler(DistributedSampler):
@@ -41,7 +67,7 @@ class StatefulDistributedSampler(DistributedSampler):
     we want to resume the data sampler from the training iteration.
     """
 
-    def __init__(self, dataset, batch_size=None, seed: int = 0, start_iter: int = 0, drop_last: bool = True):
+    def __init__(self, dataset, batch_size=None, seed: int = 0, start_iter: int = 0):
         """
         Initializes the instance of StatefulDistributedSampler. Random seed is set
         for the epoch set and data is shuffled. For starting the sampling, use
@@ -52,18 +78,14 @@ class StatefulDistributedSampler(DistributedSampler):
             dataset (Dataset): Pytorch dataset that sampler will shuffle
             batch_size (int): batch size we want the sampler to sample
             seed (int): Seed for the torch generator.
-            start_iter (int): The starting iteration for the sampler.
-            drop_last (bool): Whether to drop the last incomplete batch.
         """
-        # super init iwith shuffle=False because we implement our own shuffling inside __iter__
-        super().__init__(dataset, shuffle=False, seed=seed) 
+        super().__init__(dataset, shuffle=False, seed=seed)
 
         self.start_iter = start_iter
         self.batch_size = batch_size
         self.total_size = len(dataset) - (len(dataset) % self.num_replicas)
         self.num_samples = self.total_size // self.num_replicas
-        self.drop_last = drop_last
-        print(f"rank: {self.rank}: Sampler created, start_iter={start_iter}")
+        print(f"rank: {self.rank}: sampler created, start_iter: {self.start_iter}")
 
     def __iter__(self):
         # partition data into num_replicas and optionally shuffle within a rank
@@ -85,21 +107,7 @@ class StatefulDistributedSampler(DistributedSampler):
         # resume the sampler
         start_index = self.start_iter * self.batch_size
         indices = indices[start_index:]
-
-        # If drop_last is enabled, ensure the last batch is not incomplete
-        if self.drop_last:
-            num_batches = len(indices) // self.batch_size
-            indices = indices[:num_batches * self.batch_size]
-
         return iter(indices)
-
-    def set_start_iter(self, start_iter):
-        """
-        Set the iteration number from which the sampling should start. This is
-        used to find the marker in the data permutation order from where the
-        sampler should start sampling.
-        """
-        self.start_iter = start_iter
 
 
 class DeterministicDistributedSampler(StatefulDistributedSampler):
@@ -108,10 +116,14 @@ class DeterministicDistributedSampler(StatefulDistributedSampler):
     instead uses a fixed assignment of samples for each rank.
 
     Useful for debugging: it gives 100% reproducible sample assignments.
+
+    Args:
+        dataset (Dataset): Pytorch dataset from which to sample elements
+        batch_size (int): batch size we want the sampler to sample
     """
 
-    def __init__(self, dataset, batch_size, seed, start_iter, drop_last):
-        super().__init__(dataset, batch_size, seed, start_iter, drop_last)
+    def __init__(self, dataset, batch_size=None):
+        super().__init__(dataset, batch_size=batch_size)
         print(f"rank: {self.rank}: DEBUGGING sampler created...")
 
     def __iter__(self):
@@ -127,10 +139,4 @@ class DeterministicDistributedSampler(StatefulDistributedSampler):
         # resume the sampler
         start_index = self.start_iter * self.batch_size
         indices = indices[start_index:]
-
-        # If drop_last is enabled, ensure the last batch is not incomplete
-        if self.drop_last:
-            num_batches = len(indices) // self.batch_size
-            indices = indices[:num_batches * self.batch_size]
-
         return iter(indices)
