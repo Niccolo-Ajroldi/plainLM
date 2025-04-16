@@ -12,6 +12,9 @@ from data.datasamplers import StatefulSequentialSampler, StatefulDistributedSamp
 # TODO: improve readibility of _get_sampler
 
 
+DDP = dist.is_initialized()
+
+
 def get_dataloaders(cfg, start_step: int = 0):
   """Load trainset and perhaps validset. Returns correspondent DataLoaders."""
   
@@ -39,11 +42,11 @@ def get_dataloaders(cfg, start_step: int = 0):
     if not isinstance(valid_set, Dataset):
       raise ValueError("'dataset' should be a datasets.Dataset")
 
-    if dist.is_initialized():
+    if DDP:
       valid_sampler = DistributedSampler(valid_set, drop_last=True)
     else:
       valid_sampler = SequentialSampler(valid_set)
-      
+
     validloader = DataLoader(
       valid_set,
       batch_size=cfg.micro_batch_size,
@@ -62,27 +65,29 @@ def get_dataloaders(cfg, start_step: int = 0):
 def _get_sampler(train_set, cfg, start_step):
   """Initlaizes a sampler for a torch.Dataloader.
   Options:
-    - sequential sampler
     - random sampler
+    - sequential sampler
+    - stateful sequential sampler
   We implement "stateful" sequential samplers for resuming training from a specified step.
   """  
-  ddp = dist.is_initialized()
-  
-  if cfg.resume:
-    if ddp:
-      sampler = StatefulDistributedSampler(train_set, batch_size=cfg.micro_batch_size)
-      sampler.set_start_iter(start_step)
+  if cfg.sampler == "random":
+    if DDP:
+      sampler = DistributedSampler(train_set, shuffle=True, seed=cfg.sampler_seed, drop_last=True)
     else:
-      sampler = StatefulSequentialSampler(train_set, batch_size=cfg.micro_batch_size, start_idx=start_step)
-  else:
-    if ddp:
-      sampler = DistributedSampler(train_set, drop_last=True)
+      sampler = RandomSampler(train_set, generator=torch.Generator().manual_seed(cfg.sampler_seed) if cfg.sampler_seed else None)
+
+  elif cfg.sampler == "sequential":
+    if DDP:
+        sampler = DistributedSampler(train_set, shuffle=False, drop_last=True)
     else:
-      sampler = SequentialSampler(train_set)  # equivalent to StatefulSequentialSampler(..., start_idx=0)
-  
-  if cfg.sampler == 'random' and cfg.sampler_seed is not None and not ddp:
-    generator = torch.Generator().manual_seed(cfg.sampler_seed)
-    sampler = RandomSampler(train_set, generator=generator)
+      sampler = SequentialSampler(train_set)
+
+  elif cfg.sampler == "stateful_sequential":
+    micro_step_start = cfg.resume_step * cfg.grad_accumulation_steps if cfg.resume else 0
+    if DDP:
+      sampler = StatefulDistributedSampler(train_set, batch_size=cfg.micro_batch_size, seed=cfg.sampler_seed, drop_last=True, start_iter=micro_step_start)
+    else:
+      sampler = StatefulSequentialSampler(train_set, batch_size=cfg.micro_batch_size, start_idx=micro_step_start)
   
   return sampler
   
