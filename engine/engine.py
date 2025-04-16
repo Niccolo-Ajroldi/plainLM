@@ -7,7 +7,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from contextlib import nullcontext
 
 from models import get_param_groups
-from optim import intialize_optimizer, initalize_scheduler
+from optim import intialize_optimizer, initialize_scheduler
 
 
 def _move_to_device(batch, seq_len, device):
@@ -80,7 +80,7 @@ class TorchEngine(torch.nn.Module):
     # Optimizer
     param_groups = get_param_groups(model, cfg.weight_decay)
     self.optimizer = intialize_optimizer(param_groups, cfg)
-    self.scheduler = initalize_scheduler(self.optimizer, cfg)
+    self.scheduler = initialize_scheduler(self.optimizer, cfg)
 
     if cfg.resume:
       self.optimizer.load_state_dict(ckpt['optimizer'])
