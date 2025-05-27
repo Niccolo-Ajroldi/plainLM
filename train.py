@@ -1,6 +1,6 @@
 """Pretrain a Transformer on language modeling."""
 
-# TODO: adjust resume logic and skip data accordingly!
+# TODO: use prettytable for logging!
 
 from absl import app, flags
 from collections import defaultdict
@@ -34,27 +34,29 @@ def main(_):
     utils.log_job_info(FLAGS)
 
   # Load checkpoint and starting step
-  ckpt, micro_step_start = maybe_load_checkpoint(cfg, device)
+  ckpt = maybe_load_checkpoint(cfg, device)
 
   # Dataset
-  trainloader, validloader = get_dataloaders(cfg, micro_step_start)
+  trainloader, validloader = get_dataloaders(cfg)
 
   # Model
-  model, model_cfg = construct_model(cfg)
+  model, _ = construct_model(cfg)
 
   # Engine
   engine = TorchEngine(model, cfg, device, local_rank, ckpt)
 
-  # Training
-  print_master("=== Start Training! ===")
-  metrics = defaultdict(list)
-  train_losses = []
-  
-  # Convert conditions from step to micro_step. Avoid multiple save/log/eval during accumulation.
+  # Check conditions on micro_step to avoid multiple save/log/eval when accumulation is on.
+  step_start = cfg.resume_step if cfg.resume else 0
+  micro_step_start = step_start * cfg.grad_accumulation_steps
   micro_step_budget = cfg.steps_budget * cfg.grad_accumulation_steps
   log_every_micro_step = cfg.log_every_steps * cfg.grad_accumulation_steps
   eval_every_micro_step = cfg.eval_every_steps * cfg.grad_accumulation_steps
   save_every_micro_step = cfg.save_every_steps * cfg.grad_accumulation_steps
+  
+  # Training
+  print_master(f"=== Start Training from step: {step_start}/{cfg.steps_budget}, micro_step: {micro_step_start}/{micro_step_budget} ===")
+  metrics = defaultdict(list)
+  train_losses = []
 
   for micro_step, micro_batch in enumerate(trainloader, micro_step_start+1):
     step = micro_step // cfg.grad_accumulation_steps

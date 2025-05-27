@@ -68,9 +68,8 @@ def maybe_load_checkpoint(cfg, device):
     print(f"Loading checkpoint from {ckpt_path}")
     
     ckpt = torch.load(ckpt_path, map_location=device)
-    micro_step_start = ckpt['step'] * cfg.grad_accumulation_steps
 
-  return ckpt, micro_step_start
+  return ckpt
 
 
 def match_state_dict_keys(state_dict, state_dict_orig):

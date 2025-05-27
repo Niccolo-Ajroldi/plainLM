@@ -54,7 +54,7 @@ class TorchEngine(torch.nn.Module):
     # Load model state dict
     if cfg.resume:
       model.load_state_dict(ckpt['state_dict'])
-      self.micro_steps = ckpt['micro_step']
+      self.micro_steps = ckpt['step'] * cfg.grad_accumulation_steps
 
     # Move model to device and to DDP
     self.model = model.to(device)

@@ -13,7 +13,7 @@ from torch.utils.data.distributed import DistributedSampler
 
 
 class StatefulSequentialSampler(Sampler):
-    """Samples elements sequentially, always in the same order."""
+    """Samples elements sequentially, always in the same order, with optional start offset."""
 
     def __init__(self, data_source: Sized, batch_size=None, start_idx: int = 0):
         """
@@ -33,25 +33,24 @@ class StatefulSequentialSampler(Sampler):
 
 
 class StatefulRandomSampler(Sampler):
-    """Samples elements sequentially or shuffled, with optional start offset."""
+    """Samples elements sequentially or shuffled, always in the same order, with optional start offset."""
 
     def __init__(self, data_source: Sized, batch_size: int, start_idx: int = 0,
                  shuffle: bool = False, seed: Optional[int] = None):
-        if shuffle and seed is None:
-            raise ValueError("Seed must be set if shuffle is True in a stateful sampler.")
         self.data_source = data_source
-        self.batch_size = batch_size
         self.start_idx = start_idx * batch_size
         self.shuffle = shuffle
-        self.seed = seed
+        if shuffle:
+            if seed is None:
+                raise ValueError("Seed must be set if shuffle is True in a stateful sampler.")
+            self.g = torch.Generator()
+            self.g.manual_seed(seed)
 
     def __iter__(self):
         n = len(self.data_source)
         indices = list(range(n))
         if self.shuffle:
-            g = torch.Generator()
-            g.manual_seed(self.seed)
-            indices = torch.randperm(n, generator=g).tolist()
+            indices = torch.randperm(n, generator=self.g).tolist()
         return iter(indices[self.start_idx:])
 
     def __len__(self):
