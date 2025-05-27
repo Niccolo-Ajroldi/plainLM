@@ -73,7 +73,7 @@ exp_name: 'plainLM_eval_LAWA_01'
 check_existing_wandb_run: True
 
 resume: False
-resume_micro_step: null
+resume_step: null
 resume_exp_name: null
 
 out_dir: '/fast/najroldi/exp/llm'

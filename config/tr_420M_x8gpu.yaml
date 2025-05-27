@@ -64,7 +64,7 @@ wandb_run_name: 'tr_420M_redo'
 exp_name: 'tr_420M_redo'
 
 resume: False
-resume_micro_step: null
+resume_step: null
 resume_exp_name: null
 
 save_last_checkpoint: True

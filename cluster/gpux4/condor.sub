@@ -1,6 +1,6 @@
 
 # Define variables
-LOGS_DIR=/fast/najroldi/logs/wa_lm
+LOGS_DIR=/fast/najroldi/logs/wa_lm_2
 executable=/home/najroldi/plainLM/cluster/gpux4/condor.sh
 
 # Job specific vars
@@ -8,7 +8,7 @@ config=config/160M/save_best_01.yaml
 n_jobs=1
 
 # Args
-arguments = $(config) $(Process)
+arguments = $(config) $(Process) $(Cluster)
 
 # Logs
 error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err

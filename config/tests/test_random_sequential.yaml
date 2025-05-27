@@ -1,16 +1,9 @@
 
-deterministic: True
+deterministic: False
 seed: 1996
 
-# avg
-eval_ckpt_folder: "/fast/najroldi/exp/llm/plm_14M_save"
-avg_start_step: 0
-avg_every_steps: 1
-avg_scheme: "LAWA"
-lawa_queue_len: 2
-
-cuda_matmul_allow_tf32: False
-cudnn_allow_tf32: False
+cuda_matmul_allow_tf32: True
+cudnn_allow_tf32: True
 
 trainset_path: "/fast/najroldi/data/lm/fineweb/fw_20B_tokens_ctx1024/train"
 vocab_size: 50257
@@ -22,24 +15,24 @@ sampler_seed: 1996
 
 eval: True
 validset_path: "/fast/najroldi/data/lm/fineweb/fw_20B_tokens_ctx1024/valid"
-eval_every_steps: 10
+eval_every_steps: 24
 
 model: 'transformer'
 d_model: 128
 expand: '8/3'
-n_layers: 4
+n_layers: 6
 n_heads: 4
 mlp_class: 'glu'
 tie_embeddings: True
 torch_compile: True
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps)
-steps_budget: 100
+steps_budget: 20
 
 # note 1: this is micro batch size if grad_accumulation_steps>1
 # note 2: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
-micro_batch_size: 8
-grad_accumulation_steps: 2
+micro_batch_size: 32
+grad_accumulation_steps: 4
 
 # note: choose between {float32, float16, bfloat16}
 # note: float16 data type will automatically use a GradScaler
@@ -55,29 +48,33 @@ grad_clip: 1.0
 eps: 1.e-20
 
 scheduler: 'warmup_cosine'
-warmup_steps: 20
+warmup_steps: 700
 cooldown_steps: null
 lr_start: 1.e-10
 lr_end: null
 lr_end_pct: 0.001
 
-log_every_steps: 10
-print_progress: False
+log_every_steps: 1
+print_progress: True
 
 use_wandb: True
 wandb_watch: False
 wandb_project: 'plainLM_tests'
 wandb_dir: '/fast/najroldi/logs/wa_lm/wandb'
 check_existing_wandb_run: False
-wandb_run_name: 'plm_14M_LAWA'
-exp_name: 'plm_14M_LAWA'
+wandb_run_name: 'test_random_sequential_resume_01'
+exp_name: 'test_random_sequential_resume_01'
 
-resume: False
-resume_step: null
-resume_exp_name: null
+resume: True
+resume_step: 4
+resume_exp_name: 'test_random_sequential_01'
+
+# resume: False
+# resume_step: null
+# resume_exp_name: null
 
 out_dir: '/fast/najroldi/exp/llm'
 save_last_checkpoint: False
 save_intermediate_checkpoints: False
-save_every_steps: 10
+save_every_steps: 1
 over_write: True

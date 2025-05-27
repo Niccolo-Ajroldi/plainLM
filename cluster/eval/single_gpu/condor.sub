@@ -1,15 +1,13 @@
 
-# Executable should be a full path
-executable=/home/najroldi/plainLM/cluster/single_gpu/condor.sh
+# Define variables
+executable=/home/najroldi/plainLM/cluster/eval/single_gpu/condor.sh
 
-# Hyperparmeters are specified in a YAML configuration file
-config=config/config.yaml
+# Job specific vars
+config=config/14M/eval_ewa.yaml
+n_jobs=3
 
-# Queue as many jobs as points in the hyperaparameter grid
-n_jobs=1
-
-# Pass arguments to the executable
-arguments = $(config) $(Process)
+# Args
+arguments = $(config) $(Process) $(Cluster)
 
 # Logs
 LOGS_DIR=/fast/najroldi/logs/wa_lm
@@ -17,10 +15,12 @@ error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
 output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
 log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 
-# Job requirements
-request_memory = 50000
+# Specs
+request_memory = 500000
 request_cpus = 4
 request_gpus = 1
 requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g125.internal.cluster.is.localnet") && (TARGET.Machine != "g145.internal.cluster.is.localnet")
+# requirements = (TARGET.CUDACapability >= 9.0)
+# requirements =  (TARGET.CUDACapability >= 8.0) && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB")
 
 queue $(n_jobs)

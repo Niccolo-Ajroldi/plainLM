@@ -8,9 +8,11 @@ export TMPDIR=/fast/najroldi/tmp
 # Job specific vars
 config=$1
 job_idx=$2 # CONDOR job arrays range from 0 to n-1
+job_cluster=$3
 
 # Execute python script
 torchrun \
   --redirect 1:0,2:0,3:0 \
   --standalone --nnodes=1 --nproc_per_node=4 \
-  train.py --config=$config --job_idx=$job_idx
+  train.py --config=$config \
+  --job_idx=$job_idx --job_cluster=$job_cluster

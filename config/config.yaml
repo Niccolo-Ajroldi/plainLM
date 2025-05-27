@@ -64,7 +64,7 @@ out_dir: '/fast/najroldi/exp/llm'
 over_write: True
 
 resume: False
-resume_micro_step: null
+resume_step: null
 resume_exp_name: null
 
 save_last_checkpoint: False
