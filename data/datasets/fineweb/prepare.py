@@ -8,10 +8,18 @@
 
   On the role of EOS:
   https://discuss.huggingface.co/t/how-does-gpt-decide-to-stop-generating-sentences-without-eos-token/41623/2
-"""
 
-# export HF_HOME=/is/cluster/fast/najroldi/tmp
-CACHE_DIR="~/tmp"
+- cache_dir="~/tmp" -> Disk quota exceeded
+- cache_dir=None -> Disk quota exceeded
+
+Currently hitting disk quota or Flock errors when converting from IterableDataset to Dataset.
+
+```
+mkdir /tmp/najroldi
+export HF_HOME=/tmp/najroldi
+export HF_DATASETS_CACHE=/tmp/najroldi
+```
+"""
 
 import os
 from itertools import chain
@@ -27,19 +35,17 @@ timer_start = timer()
 # Config
 
 # Path wwhere to save dataset
-out_path = "/fast/najroldi/data/lm/fineweb/fw_20B_tokens_ctx1024"
+out_path = "/fast/najroldi/data/lm/fineweb/fw_10B_tokens_ctx1024"
 
 # HF dataset name
 dataset_name = "HuggingFaceFW/fineweb"
 
-# nrows = 20_000_000  # ~13B tokens
-nrows = 31_000_000  # ~20B tokens
+nrows = 17_000_000  # ~11B tokens
+# nrows = 31_000_000  # ~20B tokens
 
-seq_len = 2048
+seq_len = 1024
 max_seq_length = seq_len+1
 shuffle_raw_data = True
-ordering = "randomized"
-
 map_setup = dict(
   batched=True,
   batch_size=1024,
@@ -54,10 +60,11 @@ print("Loading Dataset")
 # Load in streaming mode, creates an IterableDataset
 raw_dataset = load_dataset(
   dataset_name,
-  split = 'train',  # only train available for Fineweb
+  split = 'train',  # only split available for Fineweb
   streaming = True,
   columns=["text"],  # it works only for Parquet datasets in streaming mode: https://github.com/huggingface/datasets/issues/4114#issuecomment-1090484293
-  cache_dir = CACHE_DIR,
+  ## cache_dir defaults to "~/.cache/huggingface/datasets"
+  # cache_dir="/tmp/najroldi"
 )
 
 print("From IterableDataset to Dataset")
@@ -67,7 +74,19 @@ iterable_ds = raw_dataset.take(nrows)
 def gen_from_iterable_dataset(iterable_ds):
   yield from iterable_ds
 partial_obj = partial(gen_from_iterable_dataset, iterable_ds)
-dataset = Dataset.from_generator(partial_obj, features=iterable_ds.features)
+dataset = Dataset.from_generator(
+  partial_obj, 
+  features=iterable_ds.features,
+  
+  ## cache_dir defaults to "~/.cache/huggingface/datasets"
+  # cache_dir="/fast/najroldi/tmp",  # FileSystem does not appear to support flock
+  # cache_dir="/home/najroldi/tmp",  # Disk quota exceeded
+  # cache_dir="/tmp",  # No space left on device 
+  
+  ## Fails as well: Disk quota exceeded
+  # keep_in_memory=True,
+  # cache_dir=None,
+)
 
 # Shuffle so that multiproc has shards of similar size
 if shuffle_raw_data:
@@ -108,7 +127,7 @@ tokenized_datasets = dataset.map(
 tokenizer.model_max_length = seq_len
 
 print("Saving Tokenized Data")
-tokenized_datasets.save_to_disk(os.path.join(out_path, f"train_tokenized"))
+tokenized_datasets.save_to_disk(os.path.join(out_path, f"tokenized_data"))
 
 print("Saving Tokenizer")
 tokenizer.save_pretrained(os.path.join(out_path, "tokenizer"))
