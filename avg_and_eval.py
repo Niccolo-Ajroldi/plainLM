@@ -1,4 +1,12 @@
-"""Evaluate all checkpoints in a directory."""
+"""
+Loop over checkpoints in a folder, averaging and evaluating.
+
+Notice that:
+- there is no training set.
+- micro_batch_size is used for validation, not for training.
+- grad accumulation does not need to match the one from the training script.
+- optimizer and scheduler are NOT used.
+"""
 
 from absl import app, flags
 
@@ -27,7 +35,7 @@ FLAGS = flags.FLAGS
 def main(_):
 
   # Load config from file
-  cfg, _ = utils.load_config(FLAGS.config, job_idx=None)
+  cfg, _ = utils.load_config(FLAGS.config, job_idx=FLAGS.job_idx)
 
   local_rank, world_size, device, master_process = pytorch_setup(cfg)
 
@@ -71,7 +79,7 @@ def main(_):
   eval_start_step = ((s // e) + 1) * e
   print(f"First eval at = {eval_start_step}")
 
-  print_master(f"=== Eval Loop Started! ===")
+  print_master(f"=== Loop Started! ===")
 
   for step in range(cfg.steps_budget+1):  # +1 to allow eval at the end
 

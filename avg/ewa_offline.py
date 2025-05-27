@@ -1,3 +1,4 @@
+"""Engine class for averaging weights with EWA."""
 
 import torch
 
