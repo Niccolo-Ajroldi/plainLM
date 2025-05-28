@@ -50,10 +50,12 @@ def main(_):
   micro_step_start = step_start * cfg.grad_accumulation_steps
   micro_step_budget = cfg.steps_budget * cfg.grad_accumulation_steps
   log_every_micro_step = cfg.log_every_steps * cfg.grad_accumulation_steps
-  eval_every_micro_step = cfg.eval_every_steps * cfg.grad_accumulation_steps
-  save_every_micro_step = cfg.save_every_steps * cfg.grad_accumulation_steps
+  eval_every_micro_step = cfg.eval_every_steps * cfg.grad_accumulation_steps if cfg.eval else None
+  save_every_micro_step = cfg.save_every_steps * cfg.grad_accumulation_steps if cfg.save_intermediate_checkpoints else None
   
   # Training
+  if micro_step_budget > len(trainloader):
+    raise ValueError("trainloader too short!")
   print_master(f"=== Start Training from step: {step_start}/{cfg.steps_budget}, micro_step: {micro_step_start}/{micro_step_budget} ===")
   metrics = defaultdict(list)
   train_losses = []

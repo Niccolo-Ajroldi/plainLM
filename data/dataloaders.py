@@ -15,7 +15,9 @@ def get_dataloaders(cfg):
   train_set = load_from_disk(cfg.trainset_path)
   if not isinstance(train_set , Dataset):
     raise ValueError("dataset should be a datasets.Dataset")
-  
+  if train_set.format.get("type", None) != "torch":  # support AlgoPerf datasets
+    train_set.set_format(type="torch")
+
   train_sampler = _get_sampler(train_set, cfg)
   
   trainloader = DataLoader(
@@ -35,6 +37,8 @@ def get_dataloaders(cfg):
     valid_set = load_from_disk(cfg.validset_path)
     if not isinstance(valid_set, Dataset):
       raise ValueError("'dataset' should be a datasets.Dataset")
+    if valid_set.format.get("type", None) != "torch":  # support AlgoPerf datasets
+      valid_set.set_format(type="torch")
 
     if dist.is_initialized():
       valid_sampler = DistributedSampler(valid_set, drop_last=True)
