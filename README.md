@@ -64,7 +64,7 @@ plainLM/
 
 ## ☑️ TODO
 - dummy data
-- FSDP2 support, ZeRO-2 and tensor parallel compatibility
+- [FSDP2](https://docs.pytorch.org/tutorials/intermediate/FSDP_tutorial.html) support, ZeRO-2 and tensor parallel compatibility
 - unit tests
 - improve readibility in data loading
 - add seed to `DistributedSampler`
