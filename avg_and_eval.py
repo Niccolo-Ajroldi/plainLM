@@ -5,7 +5,7 @@ Notice that:
 - there is no training set.
 - micro_batch_size is used for validation, not for training.
 - grad accumulation does not need to match the one from the training script.
-- optimizer and scheduler are NOT used.
+- optimizer and scheduler are NOT used and hence not initialized.
 """
 
 from absl import app, flags
@@ -47,6 +47,8 @@ def main(_):
   valid_set = load_from_disk(cfg.validset_path)
   if not isinstance(valid_set, Dataset):
     raise ValueError("'dataset' should be a datasets.Dataset")
+  if valid_set.format.get("type", None) != "torch":  # support AlgoPerf datasets
+    valid_set.set_format(type="torch")
   validloader = DataLoader(
     valid_set,
     batch_size = cfg.micro_batch_size,
@@ -92,8 +94,9 @@ def main(_):
     # Eval
     valid_loss = None
     if cfg.eval and step % cfg.eval_every_steps == 0 and step >= eval_start_step:
-      print_master("Evaluating on validation set")
+      print_master("Preparing for evaluation")
       avg_engine.prepare_for_eval()
+      print_master("Evaluating on validation set")
       valid_loss = avg_engine.eval(validloader)
       valid_ppl = math.exp(valid_loss)
       print_master(f'step: {step} | valid/loss: {valid_loss:.3e} | valid/ppl: {valid_ppl:.3e}')

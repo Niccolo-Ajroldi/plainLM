@@ -11,8 +11,6 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from engine.engine import _move_to_device
 
-# TODO: add torch compile!!
-
 
 class AvgEngine(torch.nn.Module):
   """A parent abstract module to average weigths offline."""
@@ -23,8 +21,6 @@ class AvgEngine(torch.nn.Module):
     self.micro_steps = 0
 
     self.seq_len = cfg.seq_len
-    self.accumulation_steps = cfg.grad_accumulation_steps
-    self.grad_clip = cfg.grad_clip
     self.dtype = cfg.dtype
     self.device = device
     self.torch_compile = cfg.torch_compile

@@ -1,4 +1,8 @@
-"""Engine class for averaging weights with EWA."""
+"""
+Engine class for averaging weights with EWA.
+
+We keep the EMA in CUDA memory.
+"""
 
 import torch
 
