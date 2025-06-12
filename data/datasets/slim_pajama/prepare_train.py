@@ -83,7 +83,7 @@ print("Tokenize")
 #   Warming: Special tokens have been added in the vocabulary, 
 #   make sure the associated word embeddings are fine-tuned or trained.
 tokenizer = AutoTokenizer.from_pretrained('EleutherAI/gpt-neox-20b')
-def tokenize_function(examples: Dict[str, List[Any]]) -> Dict[str, List[Any]]:
+def tokenize_function(examples):
   add_eos = lambda seq: (seq + tokenizer.eos_token) if seq else seq
   add_eos_batched = lambda seqs: [add_eos(seq) for seq in seqs]
   return tokenizer(
@@ -120,7 +120,7 @@ print("Concatenating in chunks of max_seq_len")
 # NOTE: the current approach leads to data loss at batch boundaries,
 #       however concatenation is not possible with this function if batched=False, 
 #       sinve concat_chunck relies on processing multiple examples at once to concatenate them.
-def group_texts(examples: Dict[str, List[Any]]) -> Dict[str, List[Any]]:
+def group_texts(examples):
     # Concatenate all texts.
     concatenated_examples = {k: list(chain(*examples[k])) for k in examples.keys()}
     total_length = len(concatenated_examples[list(examples.keys())[0]])
