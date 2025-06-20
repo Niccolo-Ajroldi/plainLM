@@ -88,3 +88,8 @@ This project was inspired by:
 - [NanoGPT](https://github.com/karpathy/nanoGPT) by Andrej Karpathy
 
 Huge thanks to these projects for their contributions to open-source language model pretraining!
+
+## Some projects using `plainLM`
+- Orvieto, A., & Gower, R. (2025). In search of Adam’s secret sauce [Preprint]. arXiv. https://arxiv.org/abs/2505.21829
+- Ajroldi, N., Orvieto, A., & Geiping, J. (2025). When, where and why to average weights? [Preprint]. arXiv. https://arxiv.org/abs/2502.06761
+- Srećković, T., Geiping, J., & Orvieto, A. (2025). Is your batch size the problem? Revisiting the Adam-SGD gap in language modeling [Preprint]. arXiv. https://arxiv.org/abs/2506.12543
