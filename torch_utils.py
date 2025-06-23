@@ -36,7 +36,7 @@ def pytorch_setup(cfg):
   random.seed(cfg.seed + seed_offset)
   np.random.seed(cfg.seed + seed_offset)
   torch.manual_seed(cfg.seed + seed_offset)
-
+  
   # allow TF32, if not specified, we follow PyTorch 2.0 default
   # https://pytorch.org/docs/stable/notes/cuda.html#tf32-on-ampere
   torch.backends.cuda.matmul.allow_tf32 = getattr(cfg, 'cuda_matmul_allow_tf32', False)

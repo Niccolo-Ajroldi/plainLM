@@ -7,7 +7,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from contextlib import nullcontext
 
 from models import get_param_groups
-from optim import intialize_optimizer, initalize_scheduler
+from optim import intialize_optimizer, initialize_scheduler
 
 
 def _move_to_device(batch, seq_len, device):
@@ -54,7 +54,7 @@ class TorchEngine(torch.nn.Module):
     # Load model state dict
     if cfg.resume:
       model.load_state_dict(ckpt['state_dict'])
-      self.micro_steps = ckpt['micro_step']
+      self.micro_steps = ckpt['step'] * cfg.grad_accumulation_steps
 
     # Move model to device and to DDP
     self.model = model.to(device)
@@ -80,7 +80,7 @@ class TorchEngine(torch.nn.Module):
     # Optimizer
     param_groups = get_param_groups(model, cfg.weight_decay)
     self.optimizer = intialize_optimizer(param_groups, cfg)
-    self.scheduler = initalize_scheduler(self.optimizer, cfg)
+    self.scheduler = initialize_scheduler(self.optimizer, cfg)
 
     if cfg.resume:
       self.optimizer.load_state_dict(ckpt['optimizer'])
@@ -125,7 +125,6 @@ class TorchEngine(torch.nn.Module):
       if self.grad_clip:
         self.scaler.unscale_(self.optimizer)
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
-        # TODO: consider torch.nn.utils.clip_grad_value_ instead!
 
       # step the optimizer, step the scaler if training in fp16
       self.scaler.step(self.optimizer)

@@ -1,2 +1,2 @@
 
-from .init_optim import intialize_optimizer, initalize_scheduler
+from .init_optim import intialize_optimizer, initialize_scheduler

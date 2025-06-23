@@ -1,7 +1,7 @@
 """Intialize optimizer and scheduler."""
 
 import torch
-from .lr_schedule import WarmupCosine, WSD, WarmupConstant
+from .lr_schedule import WarmupCosine, WSD, WarmupConstant, LinearCooldown
 
 
 def intialize_optimizer(param_groups, cfg):
@@ -16,7 +16,8 @@ def intialize_optimizer(param_groups, cfg):
       lr=cfg.lr,
       betas=[cfg.beta1, cfg.beta2],
       weight_decay=cfg.weight_decay,
-      fused=cfg.fused_optim, 
+      fused=cfg.fused_optim,
+      eps=getattr(cfg, 'eps', 1e-8)
     )
   
   elif cfg.optim == 'nadamw':
@@ -26,7 +27,8 @@ def intialize_optimizer(param_groups, cfg):
       betas=[cfg.beta1, cfg.beta2],
       weight_decay=cfg.weight_decay,
       decoupled_weight_decay=True,
-      fused=cfg.fused_optim, 
+      fused=cfg.fused_optim,
+      eps=getattr(cfg, 'eps', 1e-8)
     )
   
   elif cfg.optim == 'sgd':
@@ -67,19 +69,24 @@ def intialize_optimizer(param_groups, cfg):
   return optimizer
 
 
-def initalize_scheduler(optimizer, cfg):
-  
+def initialize_scheduler(optimizer, cfg):
+
   if cfg.scheduler is None:
     return None
   
   # Number of warmup steps
-  # either specified as a number (int) or as a percentage of steps_budget (float)
-  if cfg.warmup_steps is not None and cfg.steps_budget is not None:
+  # either specified directly (int) or as a percentage of steps_budget (float)
+  if getattr(cfg, 'warmup_steps', None) is not None:
     warmup_steps = cfg.warmup_steps if isinstance(cfg.warmup_steps, int) else int(cfg.warmup_steps * cfg.steps_budget)
-  
+
+  # Number of cooldown steps
+  # either specified directly (int) or as a percentage of steps_budget (float)
+  if getattr(cfg, 'cooldown_steps', None) is not None:
+    cooldown_steps = cfg.cooldown_steps if isinstance(cfg.cooldown_steps, int) else int(cfg.cooldown_steps * cfg.steps_budget)
+
   # Final LR of the schedule
-  # either specified as lr_end or as a percentage of lr (lr_end_pct)
-  if cfg.lr_end is not None or cfg.lr_end_pct is not None:
+  # either specified directly via `lr_end` or as a percentage of top lr via `lr_end_pct`
+  if getattr(cfg, 'lr_end', None) is not None or getattr(cfg, 'lr_end_pct', None) is not None:
     lr_end = cfg.lr_end if (cfg.lr_end is not None) else (cfg.lr_end_pct * cfg.lr)
 
   if cfg.scheduler == "warmup_cosine":
@@ -93,9 +100,6 @@ def initalize_scheduler(optimizer, cfg):
     )
 
   elif cfg.scheduler == "wsd":
-    # Number of cooldown steps
-    # either specified as a number (int) or as a percentage of steps_budget (float)
-    cooldown_steps = cfg.cooldown_steps if isinstance(cfg.cooldown_steps, int) else int(cfg.cooldown_steps * cfg.steps_budget)
     cooldown_start_step = cfg.steps_budget - cooldown_steps
     scheduler = WSD(
       optimizer,
@@ -106,7 +110,7 @@ def initalize_scheduler(optimizer, cfg):
       cooldown_start_step=cooldown_start_step,
       cooldown_steps=cooldown_steps,
     )
-    
+
   elif cfg.scheduler == "warmup_constant":
     scheduler = WarmupConstant(
       optimizer,
@@ -114,7 +118,17 @@ def initalize_scheduler(optimizer, cfg):
       lr_max=cfg.lr,
       warmup_steps=warmup_steps,
     )
-  
+
+  elif cfg.scheduler == "linear_cooldown":
+    cooldown_start_step = cfg.resume_step
+    scheduler = LinearCooldown(
+      optimizer,
+      lr_max=cfg.lr,
+      lr_end=lr_end,
+      cooldown_start_step=cooldown_start_step,
+      cooldown_steps=cooldown_steps,
+    )
+
   else:
     raise NotImplementedError(f"Not implemented scheduler: {cfg.scheduler}.")
   

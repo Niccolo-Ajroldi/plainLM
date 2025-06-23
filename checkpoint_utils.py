@@ -18,34 +18,36 @@ def _latest_checkpoint(ckpt_dir: str, prefix: str = 'checkpoint_') -> str | None
     return os.path.join(ckpt_dir, checkpoints[-1]) if checkpoints else None
 
 
-def save_checkpoint(micro_step, model, engine, cfg, job_idx=None):
+def save_checkpoint(step, model, engine, cfg, job_idx=None):
 
   optimizer = engine.optimizer
   scheduler = engine.scheduler
   scaler = engine.scaler
-  
+
+  save_optim = getattr(cfg, 'save_optim', True)
+  save_scheduler = getattr(cfg, 'save_scheduler', True)
+  save_scaler = getattr(cfg, 'save_scaler', True)
+
   state = {
-    "micro_step": micro_step,
+    "step": step,
     "state_dict": model.state_dict(),
-    "optimizer": optimizer.state_dict(),
-    "scheduler": scheduler.state_dict() if scheduler else {},
-    "scaler": scaler.state_dict()
+    "optimizer": optimizer.state_dict() if save_optim else None,
+    "scheduler": scheduler.state_dict() if scheduler and save_scheduler else {},
+    "scaler": scaler.state_dict() if save_scaler else None,
   }
 
   exp_dir = os.path.join(cfg.out_dir, cfg.exp_name)
   if job_idx is not None:  # subfolder for each job in the sweep
     exp_dir = os.path.join(exp_dir, f"job_idx_{job_idx}")
     
-  save_path = os.path.join(exp_dir, f'ckpt_micro_step_{micro_step}.pth')
+  save_path = os.path.join(exp_dir, f'ckpt_step_{step}.pth')
   print(f"Saving checkpoint to {save_path}")
   torch.save(state, save_path)
-  print(f"Successfully saved checkpoint!")
 
 
 def maybe_load_checkpoint(cfg, device):
   
   ckpt = None
-  micro_step_start = 0
   
   if cfg.resume:
     
@@ -55,8 +57,8 @@ def maybe_load_checkpoint(cfg, device):
     print(f"Resuming from {ckpt_dir}")
     
     # resume from a specified checkpoint or from the latest
-    if cfg.resume_micro_step is not None:
-      ckpt_path = os.path.join(ckpt_dir, f'ckpt_micro_step_{cfg.resume_micro_step}.pth')
+    if cfg.resume_step is not None:
+      ckpt_path = os.path.join(ckpt_dir, f'ckpt_step_{cfg.resume_step}.pth')
     else:
       ckpt_path = _latest_checkpoint(ckpt_dir, prefix='ckpt_')
     
@@ -64,6 +66,35 @@ def maybe_load_checkpoint(cfg, device):
     print(f"Loading checkpoint from {ckpt_path}")
     
     ckpt = torch.load(ckpt_path, map_location=device)
-    micro_step_start = ckpt['micro_step']
+
+  return ckpt
+
+
+def match_state_dict_keys(state_dict: dict, state_dict_orig: dict) -> dict:
+  """Modifies the keys of 'state_dict' to match the keys of 'state_dict_orig'.
+
+  Takes care of stat_dict discrepancies caused by DDP or torch.compile,
+  drop any prefixes from the state_dict, then add the correct prefixes in the correct order.
+
+  Args:
+      state_dict (dict): dict to modify
+      state_dict_orig (dict): dict to match
+  """
+
+  state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
+  state_dict = {k.replace('_orig_mod.', ''): v for k, v in state_dict.items()}
   
-  return ckpt, micro_step_start
+  orig_key = next(iter(state_dict_orig.keys()))  # first key of orig state_dict
+  
+  if orig_key.startswith('_orig_mod.module.'):
+    state_dict = {"_orig_mod.module." + k: v for k, v in state_dict.items()}
+  elif orig_key.startswith('_orig_mod.'):
+    state_dict = {"_orig_mod." + k: v for k, v in state_dict.items()}
+  elif orig_key.startswith('module._orig_mod.'):
+    state_dict = {"module._orig_mod." + k: v for k, v in state_dict.items()}
+  elif orig_key.startswith('module.'):
+    state_dict = {"module." + k: v for k, v in state_dict.items()}
+
+  return state_dict
+  
+  

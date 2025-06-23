@@ -43,12 +43,70 @@ def init_wandb(cfg):
   """Initalizes a wandb run"""
   os.environ["WANDB__SERVICE_WAIT"] = "600"
   os.environ["WANDB_SILENT"] = "true"
+
+  if getattr(cfg, 'check_existing_wandb_run', False):
+    if _matching_wandb_run_exists(cfg):
+      raise FileExistsError("A run with the same config exists. Aborting.")
+
   wandb.init(
     project=cfg.wandb_project, 
     name=cfg.wandb_run_name, 
     dir=cfg.wandb_dir,
     config=cfg._asdict()
   )
+
+
+def log_job_info(FLAGS):
+  """Logs info about cluster job."""
+  if FLAGS.job_cluster is not None and FLAGS.job_idx is not None:
+    print(f'JOB_CLUSER = {FLAGS.job_cluster}')
+    print(f'JOB_INDEX = {FLAGS.job_idx}')
+    print(f'JOB_ID = {FLAGS.job_cluster}.{FLAGS.job_idx}')
+    wandb.log({'JOB_CLUSTER': FLAGS.job_cluster})
+    wandb.log({'JOB_INDEX': FLAGS.job_idx})
+    wandb.log({'JOB_ID': f"{FLAGS.job_cluster}.{FLAGS.job_idx}",})
+
+
+def _matching_wandb_run_exists(cfg):
+    """Check for runs on wandb with the same config. Return True if such run exists."""
+
+    api = wandb.Api()
+    runs = api.runs(f"ajnico/{cfg.wandb_project}")
+    
+    # Extract important flags from configs
+    to_match_config = {k: getattr(cfg, k) for k in {
+      "trainset_path", "vocab_size", "seq_len", "eval", "validset_path", "eval_every_steps",
+      "model", "d_model", "expand", "n_layers", "n_heads", "mlp_class", "tie_embeddings",
+      "steps_budget", "micro_batch_size", "grad_accumulation_steps", "dtype", 
+      "optim", "lr", "weight_decay", "beta1", "beta2", "grad_clip", "eps",
+      "scheduler", "warmup_steps", "cooldown_steps", "lr_start", "lr_end", "lr_end_pct",
+      "sampler_seed", "seed",
+    }}
+    print(f"Checking for wand runs with the same config....")
+    # print(f"Matching config: {to_match_config}\n\n")
+
+    # Separate non-float and float keys
+    non_float_config = {k: v for k, v in to_match_config.items() if not isinstance(v, float)}
+    float_config = {k: v for k, v in to_match_config.items() if isinstance(v, float)}
+
+    # Step 1: Fetch and filter runs using non-float keys
+    runs = api.runs(
+      f"ajnico/{cfg.wandb_project}",
+      filters={"$and": [{"config.{}".format(k): v} for k, v in non_float_config.items()]}
+    )
+    if not runs:  # If no matches are found in the first stage
+      return False
+
+    # Step 2: Refine matches using float attributes only
+    for run in runs:
+      if all(
+        math.isclose(v, run.config.get(k), rel_tol=1e-5, abs_tol=1e-5)
+        for k, v in float_config.items()
+      ):
+        print(f"Found matching wandb run with ID: {run.id}")
+        return True
+
+    return False
 
 
 def maybe_make_dir(cfg, job_idx=None):
