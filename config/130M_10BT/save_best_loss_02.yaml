@@ -1,37 +1,38 @@
 
 deterministic: False
-seed: 1996
+seed: 2996
 
 cuda_matmul_allow_tf32: True
 cudnn_allow_tf32: True
 
-trainset_path: "/fast/najroldi/data/lm/fineweb/fw_20B_tokens_ctx1024/train"
+trainset_path: "/fast/najroldi/data/finewebedu2/train"
 vocab_size: 50257
 seq_len: 1024
 num_workers: 4
 
 sampler: 'stateful_random'
-sampler_seed: 1996
+sampler_seed: 2996
 
 eval: True
-validset_path: "/fast/najroldi/data/lm/fineweb/fw_20B_tokens_ctx1024/valid"
-eval_every_steps: 10
+validset_path: "/fast/najroldi/data/finewebedu2/val"
+eval_every_steps: 40
 
 model: 'transformer'
 d_model: 768
 expand: '8/3'
 n_layers: 12
 n_heads: 12
-mlp_class: 'gmlp'
+mlp_class: 'glu'
 tie_embeddings: True
+torch_compile: True
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps)
-steps_budget: 19200
+steps_budget: 9400
 
 # note 1: this is micro batch size if grad_accumulation_steps>1
 # note 2: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
 micro_batch_size: 64
-grad_accumulation_steps: 2
+grad_accumulation_steps: 4
 
 # note: choose between {float32, float16, bfloat16}
 # note: float16 data type will automatically use a GradScaler
@@ -39,30 +40,30 @@ dtype: 'bfloat16'
 
 optim: 'adamw'
 fused_optim: True
-lr: [3.e-4, 1.e-3, 3.e-3, 1.e-2, 3.e-2]
-weight_decay: [0.01, 0.1]
+lr: 0.01
+weight_decay: 0.1
 beta1: 0.9
 beta2: 0.95
-grad_clip: [0.01, 0.1]
+grad_clip: 0.1
 eps: 1.e-12
 
 scheduler: 'warmup_cosine'
-warmup_steps: [0.01, 0.1]
+warmup_steps: 0.1
 cooldown_steps: null
 lr_start: 1.e-10
 lr_end: null
-lr_end_pct: [0.1, 0.0]
+lr_end_pct: 0.0
 
-log_every_steps: 10
+log_every_steps: 40
 print_progress: False
 
 use_wandb: True
 wandb_watch: False
+check_existing_wandb_run: True
 wandb_project: 'wa_lm_2'
 wandb_dir: '/fast/najroldi/logs/wa_lm_2/wandb'
-check_existing_wandb_run: False
-wandb_run_name: 'sweep_01'
-exp_name: 'sweep_01'
+wandb_run_name: 'save_best_loss_02'
+exp_name: 'save_best_loss_02'
 
 resume: False
 resume_step: null
@@ -71,5 +72,9 @@ resume_exp_name: null
 out_dir: '/fast/najroldi/exp/wa_lm_2'
 save_last_checkpoint: True
 save_intermediate_checkpoints: True
-save_every_steps: 10
+save_every_steps: 4
+save_optim: False
+save_scheduler: False
+save_scaler: False
+
 over_write: True

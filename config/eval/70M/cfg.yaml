@@ -63,7 +63,6 @@ wandb_project: 'wa_lm'
 wandb_dir: '/fast/najroldi/logs/wa_lm/wandb'
 wandb_run_name: 'plm_save_best_01'
 exp_name: 'plm_save_best_01'
-check_existing_wandb_run: False
 
 resume: False
 resume_step: null

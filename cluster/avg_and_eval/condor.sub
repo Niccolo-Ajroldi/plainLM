@@ -1,0 +1,26 @@
+
+# Define variables
+LOGS_DIR=/fast/najroldi/logs/wa_lm_2
+executable=/home/najroldi/plainLM/cluster/avg_and_eval/condor.sh
+
+# Job specific vars
+config=config/130M_10BT/ewa_fastest_03.yaml
+n_jobs=40
+
+# Args
+arguments = $(config) $(Process) $(Cluster)
+
+# Logs
+error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Specs
+request_memory = 250000
+request_cpus = 4
+request_gpus = 1
+requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g125.internal.cluster.is.localnet")
+
+queue $(n_jobs)
+
+# cluster 16221769

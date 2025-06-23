@@ -1,0 +1,89 @@
+
+## => run with this bsz=128 on 1GPU
+
+# avg
+eval_ckpt_folder: "/fast/najroldi/exp/wa_lm_2/save_fastest_to_target_01/job_idx_0"
+avg_start_step: 0
+avg_every_steps: [1, 4, 16, 64, 128, 256, 512, 1024]
+avg_scheme: "LAWA"
+lawa_queue_len: [2, 5, 10, 20, 50]
+
+deterministic: False
+seed: 2996
+
+cuda_matmul_allow_tf32: True
+cudnn_allow_tf32: True
+
+trainset_path: "/fast/najroldi/data/finewebedu2/train"
+vocab_size: 50257
+seq_len: 1024
+num_workers: 4
+
+sampler: 'stateful_random'
+sampler_seed: 2996
+
+eval: True
+validset_path: "/fast/najroldi/data/finewebedu2/val"
+eval_every_steps: 40
+
+model: 'transformer'
+d_model: 768
+expand: '8/3'
+n_layers: 12
+n_heads: 12
+mlp_class: 'glu'
+tie_embeddings: True
+torch_compile: True
+
+# note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps)
+steps_budget: 9400
+
+# note 1: this is micro batch size if grad_accumulation_steps>1
+# note 2: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
+micro_batch_size: 128
+grad_accumulation_steps: null
+
+# note: choose between {float32, float16, bfloat16}
+# note: float16 data type will automatically use a GradScaler
+dtype: 'bfloat16'
+
+optim: null
+fused_optim: null
+lr: null
+weight_decay: null
+beta1: null
+beta2: null
+grad_clip: null
+eps: null
+
+scheduler: null
+warmup_steps: null
+cooldown_steps: null
+lr_start: null
+lr_end: null
+lr_end_pct: null
+
+log_every_steps: null
+print_progress: null
+
+use_wandb: True
+wandb_watch: False
+check_existing_wandb_run: False
+wandb_project: 'wa_lm_2'
+wandb_dir: '/fast/najroldi/logs/wa_lm_2/wandb'
+wandb_run_name: 'lawa_sweep_02'
+exp_name: 'lawa_sweep_02'
+
+resume: null
+resume_step: null
+resume_exp_name: null
+
+out_dir: '/fast/najroldi/exp/wa_lm_2'
+save_last_checkpoint: False
+save_intermediate_checkpoints: False
+save_every_steps: null
+save_optim: False
+save_scheduler: False
+save_scaler: False
+
+over_write: True

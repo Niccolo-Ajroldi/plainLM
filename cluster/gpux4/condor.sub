@@ -4,8 +4,8 @@ LOGS_DIR=/fast/najroldi/logs/wa_lm_2
 executable=/home/najroldi/plainLM/cluster/gpux4/condor.sh
 
 # Job specific vars
-config=config/160M/save_best_01.yaml
-n_jobs=1
+config=config/420M_10BT/sweep_01_x4gpus.yaml
+n_jobs=20
 
 # Args
 arguments = $(config) $(Process) $(Cluster)
@@ -19,7 +19,7 @@ log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 request_memory = 1000000
 request_cpus = 16
 request_gpus = 4
-requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g125.internal.cluster.is.localnet")
-# requirements =  (TARGET.CUDACapability >= 8.0) && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB")
+# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g125.internal.cluster.is.localnet")
+requirements =  (TARGET.CUDACapability >= 8.0) && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB")
 
 queue $(n_jobs)
