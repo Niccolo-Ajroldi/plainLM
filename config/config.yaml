@@ -25,7 +25,7 @@ rms_norm: True
 tie_embeddings: False
 torch_compile: True
 
-# note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps)
+# note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
 steps_budget: 4800
 
 # note: this is micro batch size if grad_accumulation_steps>1
