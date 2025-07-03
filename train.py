@@ -1,7 +1,5 @@
 """Pretrain a Transformer on language modeling."""
 
-# TODO: use prettytable for logging!
-
 from absl import app, flags
 from collections import defaultdict
 
@@ -45,45 +43,43 @@ def main(_):
   # Engine
   engine = TorchEngine(model, cfg, device, local_rank, ckpt)
 
-  # Check conditions on micro_step to avoid multiple save/log/eval when accumulation is on.
+  # Start the dataloader from the correct micro-batch
   step_start = cfg.resume_step if cfg.resume else 0
   micro_step_start = step_start * cfg.grad_accumulation_steps
   micro_step_budget = cfg.steps_budget * cfg.grad_accumulation_steps
-  log_every_micro_step = cfg.log_every_steps * cfg.grad_accumulation_steps
-  eval_every_micro_step = cfg.eval_every_steps * cfg.grad_accumulation_steps if cfg.eval else None
-  save_every_micro_step = cfg.save_every_steps * cfg.grad_accumulation_steps if cfg.save_intermediate_checkpoints else None
-  
-  # Training
   if micro_step_budget > len(trainloader):
     raise ValueError("trainloader too short!")
   print_master(f"=== Start Training from step: {step_start}/{cfg.steps_budget}, micro_step: {micro_step_start}/{micro_step_budget} ===")
-  metrics = defaultdict(list)
-  train_losses = []
 
+  # Bookkeeping
+  metrics = defaultdict(list)
+  train_loss_array = []
+
+  # Training
   for micro_step, micro_batch in enumerate(trainloader, micro_step_start+1):
     step = micro_step // cfg.grad_accumulation_steps
-    if micro_step > micro_step_budget:
+    is_step = micro_step % cfg.grad_accumulation_steps == 0
+    if step > cfg.steps_budget and is_step:
       break
 
     # Train
     train_loss = engine.step(micro_batch)
-    train_losses.append(train_loss)
+    train_loss_array.append(train_loss)
 
     # Eval
     valid_loss = None
-    if cfg.eval and micro_step % eval_every_micro_step == 0:
+    if cfg.eval and step % cfg.eval_every_steps == 0 and is_step:
       print_master("Evaluating on validation set")
       valid_loss = engine.eval(validloader)
 
     # Log
-    if micro_step % log_every_micro_step == 0:
-      if master_process:
-        utils.log(cfg, metrics, micro_step, train_losses, valid_loss, engine.optimizer, world_size)
-      train_losses = []
+    if master_process and step % cfg.log_every_steps == 0 and is_step:
+      utils.log(cfg, metrics, micro_step, train_loss, train_loss_array, valid_loss, engine.optimizer, world_size)
+      train_loss_array = []
 
     # Checkpoint
-    if master_process and cfg.save_intermediate_checkpoints and micro_step % save_every_micro_step == 0:
-      save_checkpoint(step, model, engine, cfg, JOB_IDX)
+    if master_process and cfg.save_intermediate_checkpoints and step % cfg.save_every_steps == 0 and is_step:
+      save_checkpoint(step, model, engine, cfg, metrics, JOB_IDX)
 
   # End of training: log and save checkpoint
   print_master(f"=== Training Completed! ===")

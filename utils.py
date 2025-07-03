@@ -109,6 +109,14 @@ def _matching_wandb_run_exists(cfg):
     return False
 
 
+def get_exp_dir_path(cfg, job_idx=None):
+  """Build a exp_dir path from config. It supports job arrays."""
+  exp_dir = os.path.join(cfg.out_dir, cfg.exp_name)
+  if job_idx is not None:  # subfolder for each job in the sweep
+    exp_dir = os.path.join(exp_dir, f"job_idx_{job_idx}")
+  return exp_dir
+
+
 def maybe_make_dir(cfg, job_idx=None):
   """Creates an experiment directory if checkpointing is enabled"""
   if not cfg.save_intermediate_checkpoints and not cfg.save_last_checkpoint:
@@ -116,9 +124,7 @@ def maybe_make_dir(cfg, job_idx=None):
   if cfg.resume and cfg.resume_exp_name is None:  # if resuming from the same exp
     return
 
-  exp_dir = os.path.join(cfg.out_dir, cfg.exp_name)
-  if job_idx is not None:  # subfolder for each job in the sweep
-    exp_dir = os.path.join(exp_dir, f"job_idx_{job_idx}")
+  exp_dir = get_exp_dir_path(cfg, job_idx)
 
   if os.path.exists(exp_dir):
     if not cfg.over_write:
@@ -132,21 +138,23 @@ def maybe_make_dir(cfg, job_idx=None):
     yaml.dump(cfg._asdict(), file, default_flow_style=False)
 
 
-def log(cfg, metrics, micro_step, train_losses, valid_loss, optimizer, world_size):
-  "Computes new metrcs and appends them to metrics. Logs on wandb. Prints log."
-  # NOTE: train_losses is an array of losses, if DDP, this is from master_process only
-  # NOTE: valid_loss is a float, already reduced across GPUs
+def log(cfg, metrics, micro_step, train_loss, train_loss_array, valid_loss, optimizer, world_size):
+  """Update metrics, print to console, log on wandb."""
 
-  if isinstance(train_losses, list):
-    train_loss = torch.stack(train_losses).mean().item() # avg loss
+  if isinstance(train_loss_array, list):
+    train_loss_avg = torch.stack(train_loss_array).mean().item()
+  elif isinstance(train_loss_array, torch.Tensor):
+    train_loss_avg = train_loss_array.item()
 
   new_metrics = {
-    "micro_step": micro_step,
-    "step": int(micro_step / cfg.grad_accumulation_steps),
-    "tokens": micro_step * cfg.micro_batch_size * cfg.seq_len * world_size,
-    "lr": optimizer.param_groups[0].get("lr", float("NaN")),
-    "train/loss": train_loss,
-    "train/ppl": math.exp(train_loss),
+    f"micro_step": micro_step,
+    f"step": micro_step // cfg.grad_accumulation_steps,
+    f"tokens": micro_step * cfg.micro_batch_size * cfg.seq_len * world_size,
+    f"lr": optimizer.param_groups[0].get("lr", float("NaN")),
+    f"train/loss": train_loss.item(),
+    f"train/loss_avg": train_loss_avg,
+    f"train/ppl": math.exp(train_loss),
+    f"train/ppl_avg": math.exp(train_loss_avg),
   }
   if valid_loss is not None:
     new_metrics["valid/loss"] = valid_loss
@@ -158,8 +166,7 @@ def log(cfg, metrics, micro_step, train_losses, valid_loss, optimizer, world_siz
   if cfg.print_progress:
     msg = ' | '.join(
       f"{key}: {value:.3e}" if isinstance(value, float) else f"{key}: {value}"
-      for key, value in new_metrics.items()
-    )
+      for key, value in new_metrics.items())
     print(msg)
   
   if cfg.use_wandb:
@@ -170,7 +177,6 @@ def print_master(msg):
   """Prints only in master process if using multiple GPUs."""
   rank = os.environ.get('RANK', -1)
   ddp = int(rank) != -1
-  master_process = (not ddp) or (int(rank) == 0)
-  
+  master_process = (not ddp) or (int(rank) == 0)  
   if master_process:
     print(msg)

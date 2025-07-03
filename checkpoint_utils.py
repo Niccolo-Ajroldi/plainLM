@@ -1,24 +1,24 @@
 
 import os
 import re
+import json
 import torch
-
-# from flax.training.checkpoints import latest_checkpoint
+import utils
 
 
 def _latest_checkpoint(ckpt_dir: str, prefix: str = 'checkpoint_') -> str | None:
-    """Retrieve the latest checkpoint path in a directory."""
-    if not os.path.isdir(ckpt_dir):
-        return None
+  """Retrieve the latest checkpoint path in a directory."""
+  if not os.path.isdir(ckpt_dir):
+    return None
 
-    # List all files matching the prefix pattern
-    checkpoints = [f for f in os.listdir(ckpt_dir) if re.match(rf"^{prefix}\d+$", f)]
-    checkpoints.sort(key=lambda x: int(x[len(prefix):]))  # Sort numerically
+  # List all files matching the prefix pattern
+  checkpoints = [f for f in os.listdir(ckpt_dir) if re.match(rf"^{prefix}\d+$", f)]
+  checkpoints.sort(key=lambda x: int(x[len(prefix):]))  # Sort numerically
 
-    return os.path.join(ckpt_dir, checkpoints[-1]) if checkpoints else None
+  return os.path.join(ckpt_dir, checkpoints[-1]) if checkpoints else None
 
 
-def save_checkpoint(step, model, engine, cfg, job_idx=None):
+def save_checkpoint(step, model, engine, cfg, metrics, job_idx=None):
 
   optimizer = engine.optimizer
   scheduler = engine.scheduler
@@ -36,13 +36,17 @@ def save_checkpoint(step, model, engine, cfg, job_idx=None):
     "scaler": scaler.state_dict() if save_scaler else None,
   }
 
-  exp_dir = os.path.join(cfg.out_dir, cfg.exp_name)
-  if job_idx is not None:  # subfolder for each job in the sweep
-    exp_dir = os.path.join(exp_dir, f"job_idx_{job_idx}")
-    
+  exp_dir = utils.get_exp_dir_path(cfg, job_idx)
+
+  # Save ckpt
   save_path = os.path.join(exp_dir, f'ckpt_step_{step}.pth')
   print(f"Saving checkpoint to {save_path}")
   torch.save(state, save_path)
+
+  # Save metrics
+  metrics_path = os.path.join(exp_dir, f'metrics.json')
+  with open(metrics_path, 'w') as f:
+    json.dump(dict(metrics), f)
 
 
 def maybe_load_checkpoint(cfg, device):
