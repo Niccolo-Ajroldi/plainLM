@@ -20,10 +20,16 @@ You can save the raw dataset by passing `--save_raw` flag.
 You can save the tokenized dataset by passing `--save_tokenized` flag.
 We recommend saving intermediate datasets to avoid re-downloading or re-tokenizing them.
 
-TODO: 
-- test!
-- support different tokenizers
-- support different datasets
+After all the ops are completed, the output should look like this (assuming `--split_train_valid` is passed)
+```
+out_path/
+├── raw_dataset/          # Contains the raw dataset (if --save_raw is passed)
+├── tokenized_dataset/    # Contains the tokenized dataset (if --save_tokenized is passed)
+├── tokenizer/            # Contains the tokenizer (if --save_tokenizer is passed)
+└── ctx_{seq_length}/
+    ├── train/            # Contains the training set
+    └── valid/            # Contains the validation set
+```
 """
   
 import os
@@ -31,21 +37,31 @@ import os
 from absl import app, flags
 from functools import partial
 from datasets import Dataset, load_from_disk, load_dataset
-from transformers import GPT2Tokenizer
+from transformers import AutoTokenizer
 from timeit import default_timer as timer
 
 from utils import concat_chunck
 
 
-flags.DEFINE_string('out_path', '/fast/najroldi/data/lm/fwedu/fwedu_sample10B_ctx2048', 'Path where to save the dataset.')
+flags.DEFINE_string('out_path', '/fast/najroldi/data/lm/fwedu/test6', 'Path where to save the dataset.')
 
 flags.DEFINE_boolean('download', False, 'Download the raw dataset.')
 flags.DEFINE_boolean('tokenize', False, 'Tokenize the raw dataset.')
 flags.DEFINE_boolean('chunk', False, 'Chunk the tokenized dataset.')
 
+flags.DEFINE_string('dataset_path', 'HuggingFaceFW/fineweb-edu', 'Path of the dataset to download.')
+flags.DEFINE_string('dataset_split', 'train', 'Split of the dataset to download.')
+flags.DEFINE_string('dataset_name', 'sample-10BT', 'Defines the name of the dataset configuration.')
+flags.DEFINE_list('dataset_columns', ['text'], 'Columns to keep from the dataset.')
+
 flags.DEFINE_boolean('streaming', False, 'Download the dataset in streaming mode. Ignored if `download` is False.')
 flags.DEFINE_integer('nrows', None, 'Number of rows to download. Ignored if `download` is False.')
+
+flags.DEFINE_string('tokenizer', 'gpt2', 'A valid tokenizer for transformers.AutoTokenizer.')
 flags.DEFINE_integer('seq_length', None, 'Sequence length for chunking the dataset. Ignored if `chunk` is False.')
+
+flags.DEFINE_boolean('split_train_valid', True, 'Split the dataset into train and valid sets after chunking.')
+flags.DEFINE_integer('n_tokens_valid', None, 'Number of tokens in the validation set. Ignored if `chunk` is False.')
 
 flags.DEFINE_boolean('save_raw', False, 'Save the raw dataset to disk. Ignored if `download` is False.')
 flags.DEFINE_boolean('save_tokenized', False, 'Save the tokenized dataset to disk. Ignored if `tokenize` is False.')
@@ -54,7 +70,7 @@ flags.DEFINE_boolean('save_tokenizer', False, 'Save the tokenizer to disk. Ignor
 FLAGS = flags.FLAGS
 
 
-def tokenize_batched(tokenizer, examples):
+def tokenize_batched(examples, tokenizer):
   eos_token = tokenizer.eos_token
   add_eos = lambda seq: (eos_token + seq + eos_token) if seq else seq
   add_eos_batched = lambda seqs: [add_eos(seq) for seq in seqs]
@@ -67,7 +83,7 @@ def tokenize_batched(tokenizer, examples):
   return tokenized_output
 
 
-def main():
+def main(_):
     raw_ds = None
     tokenized_ds = None
     
@@ -128,7 +144,7 @@ def main():
         # Shuffle so that multiproc has shards of similar size
         raw_ds = raw_ds.shuffle(seed=1996)
 
-        tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+        tokenizer = AutoTokenizer.from_pretrained('EleutherAI/gpt-neox-20b')
         print(f"Length of tokenizer = {len(tokenizer)}")
 
         # Set an high maximum number of tokens that the tokenizer can handle 
@@ -179,10 +195,20 @@ def main():
             **map_setup
         )
         print(f"Number of tokens in chunked_ds: {len(chunked_ds) * max_seq_length:_}")
-        
+    
         # Cast to tensors
         chunked_ds.set_format("torch")
 
+        elapsed = timer() - time_start
+        print(f"Chunkization time: {elapsed // 60} min")
+        
+    # --------------------------------------------------------------------
+    ## Split.
+
+    if not FLAGS.split_train_valid:
+        chunked_ds.save_to_disk(os.path.join(out_path, f"ctx_{FLAGS.seq_length}", FLAGS.dataset_split))
+    
+    else:
         # NOTE: potential single-document contamination in train-valid split (similar to modded-gpt).
         # One document might be split across both train and valid splits.
         # We do not shuffle befre chunking, to avoid mulutple documents contamination.
@@ -203,7 +229,7 @@ def main():
 
         if os.path.exists(train_ds_path):
             raise FileExistsError("Trainset already exists.")
-        if os.path.exists(valid_ds):
+        if os.path.exists(valid_ds_path):
             raise FileExistsError("Validset already exists.")
 
         print("Saving trainset")
@@ -211,8 +237,6 @@ def main():
         print("Saving validset")
         valid_ds.save_to_disk(valid_ds_path)
 
-        elapsed = timer() - time_start
-        print(f"Chunkization time: {elapsed // 60} min")
 
 if __name__ == "__main__":
     app.run(main)
