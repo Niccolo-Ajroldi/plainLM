@@ -59,7 +59,7 @@ class TorchEngine(torch.nn.Module):
     self.accumulation_steps = cfg.grad_accumulation_steps
     self.grad_clip = cfg.grad_clip
     self.dtype = cfg.dtype
-    self.intra_doc_masking = cfg.intra_doc_masking
+    self.intra_doc_masking = getattr(cfg, "intra_doc_masking", False)
 
     self.device = device
     

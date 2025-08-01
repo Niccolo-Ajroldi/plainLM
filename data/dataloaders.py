@@ -33,7 +33,7 @@ def get_dataloaders(cfg):
     # drop_last=True, # raise error when True and batch_size is specified, TODO: fix
     prefetch_factor=2 if cfg.num_workers > 0 else None,
     persistent_workers=True if cfg.num_workers > 0 else False,
-    collate_fn=collate_fn if cfg.intra_doc_masking else None
+    collate_fn=collate_fn if 'docs_lengths' in train_set.column_names else None
   )
 
   if not cfg.validset_path:
@@ -62,7 +62,7 @@ def get_dataloaders(cfg):
       pin_memory=True,
       prefetch_factor=2 if cfg.num_workers > 0 else None,
       persistent_workers=False,
-      collate_fn=collate_fn if cfg.intra_doc_masking else None
+      collate_fn=collate_fn if 'docs_lengths' in train_set.column_names else None
     )
   
   return trainloader, validloader
