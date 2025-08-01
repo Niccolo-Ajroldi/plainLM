@@ -17,7 +17,13 @@ def get_dataloaders(cfg):
     raise ValueError("dataset should be a datasets.Dataset")
 
   train_sampler = _get_sampler(train_set, cfg)
-  
+
+  def collate_fn(batch):
+    return {
+      "input_ids": torch.stack([x["input_ids"] for x in batch], dim=0),
+      "docs_lengths": [x["docs_lengths"].tolist() for x in batch]
+    }
+
   trainloader = DataLoader(
     train_set,
     sampler=train_sampler,
@@ -27,6 +33,7 @@ def get_dataloaders(cfg):
     # drop_last=True, # raise error when True and batch_size is specified, TODO: fix
     prefetch_factor=2 if cfg.num_workers > 0 else None,
     persistent_workers=True if cfg.num_workers > 0 else False,
+    collate_fn=collate_fn if cfg.intra_doc_masking else None
   )
 
   if not cfg.validset_path:
@@ -35,8 +42,10 @@ def get_dataloaders(cfg):
     valid_set = load_from_disk(cfg.validset_path)
     if not isinstance(valid_set, Dataset):
       raise ValueError("'dataset' should be a datasets.Dataset")
-    if valid_set.format.get("type", None) != "torch":  # support AlgoPerf datasets
-      valid_set.set_format(type="torch")
+
+    if getattr(cfg, 'valid_tokens', False):  # subsample validatiion set
+      valid_rows = cfg.valid_tokens // (cfg.seq_len + 1)
+      valid_set = valid_set.take(valid_rows)
 
     if dist.is_initialized():
       valid_sampler = DistributedSampler(valid_set, drop_last=True)
@@ -53,6 +62,7 @@ def get_dataloaders(cfg):
       pin_memory=True,
       prefetch_factor=2 if cfg.num_workers > 0 else None,
       persistent_workers=False,
+      collate_fn=collate_fn if cfg.intra_doc_masking else None
     )
   
   return trainloader, validloader

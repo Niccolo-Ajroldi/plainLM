@@ -40,7 +40,7 @@ class Attention(nn.Module):
         self.w_qkv = nn.Linear(cfg.dim, 3*cfg.dim, bias=False)
         self.w_out = nn.Linear(cfg.dim, cfg.dim, bias=False)
     
-    def forward(self, x, freqs_cis):
+    def forward(self, x, freqs_cis, attn_mask=None):
         bsz, seqlen, d = x.shape # (bsz, seqlen, d)
         
         q, k, v = self.w_qkv(x).split(d, dim=2) # (bsz, seqlen, d)
@@ -54,7 +54,17 @@ class Attention(nn.Module):
         k = k.transpose(1, 2) # (bsz, nh, seqlen, h_dim)
         v = v.transpose(1, 2) # (bsz, nh, seqlen, h_dim)
         
-        out = F.scaled_dot_product_attention(q, k, v, is_causal=True) # (bsz, nh, seqlen, h_dim)
+        if attn_mask is not None:
+          # attn_mask has shape (bsz, seqlen, seqlen)
+          # from (bsz, L, L) to (bsz, 1, L, L) so it broadcasts over heads
+          # import pdb
+          # pdb.set_trace()
+          attn_mask = attn_mask.unsqueeze(1)
+          # pdb.set_trace()
+
+          out = F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask) # (bsz, nh, seqlen, h_dim)
+        else:
+          out = F.scaled_dot_product_attention(q, k, v, is_causal=True) # (bsz, nh, seqlen, h_dim)
         
         out = out.transpose(1, 2).contiguous().view(bsz, seqlen, d) # (bsz, seqlen, d)
         
@@ -69,9 +79,9 @@ class Block(nn.Module):
         self.mlp_norm = RMSNorm(cfg.dim, cfg.rmsorm_eps)
         self.layer_id = layer_id
     
-    def forward(self, x, freqs_cis):
+    def forward(self, x, freqs_cis, attn_mask):
         # x: (bsz, seqlen, dim)
-        x = x + self.attn(self.attn_norm(x), freqs_cis)
+        x = x + self.attn(self.attn_norm(x), freqs_cis, attn_mask)
         x = x + self.mlp(self.mlp_norm(x))
         return x
 
@@ -95,12 +105,12 @@ class Transformer(nn.Module):
         if cfg.tie_embeddings:
             self.tie_weights()
 
-    def forward(self, x):
+    def forward(self, x, attn_mask):
         # x: (bsz, seqlen)
         x = self.embed_tokens(x) # (bsz, seqlen, dim)
         self.freqs_cis = self.freqs_cis.to(x.device)
         for layer in self.layers:
-            x = layer(x, self.freqs_cis) # (bsz, seqlen, dim)
+            x = layer(x, self.freqs_cis, attn_mask) # (bsz, seqlen, dim)
         return self.lm_head(self.out_norm(x)) # (bsz, seqlen, vocab_size)
 
     def _init_weights(self, module):
