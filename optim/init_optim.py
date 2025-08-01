@@ -74,18 +74,18 @@ def initialize_scheduler(optimizer, cfg):
   if cfg.scheduler is None:
     return None
   
-  # Number of warmup steps
-  # either specified directly (int) or as a percentage of steps_budget (float)
+  ## Number of warmup steps
+  # either specified directly (int) or as a fraction of steps_budget (float)
   if getattr(cfg, 'warmup_steps', None) is not None:
     warmup_steps = cfg.warmup_steps if isinstance(cfg.warmup_steps, int) else int(cfg.warmup_steps * cfg.steps_budget)
 
-  # Number of cooldown steps
-  # either specified directly (int) or as a percentage of steps_budget (float)
+  ## Number of cooldown steps
+  # either specified directly (int) or as a fraction of steps_budget (float)
   if getattr(cfg, 'cooldown_steps', None) is not None:
     cooldown_steps = cfg.cooldown_steps if isinstance(cfg.cooldown_steps, int) else int(cfg.cooldown_steps * cfg.steps_budget)
 
-  # Final LR of the schedule
-  # either specified directly via `lr_end` or as a percentage of top lr via `lr_end_pct`
+  ##Final LR of the schedule
+  # either specified directly via `lr_end` or as a fraction of top lr via `lr_end_pct`
   if getattr(cfg, 'lr_end', None) is not None or getattr(cfg, 'lr_end_pct', None) is not None:
     lr_end = cfg.lr_end if (cfg.lr_end is not None) else (cfg.lr_end_pct * cfg.lr)
 
