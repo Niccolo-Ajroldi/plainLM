@@ -20,30 +20,51 @@ You can save the raw dataset by passing `--save_raw` flag.
 You can save the tokenized dataset by passing `--save_tokenized` flag.
 We recommend saving intermediate datasets to avoid re-downloading or re-tokenizing them.
 
-After all the ops are completed, the output should look like this (assuming `--split_train_valid` is passed)
+Example: preprocess FineWebEdu 10BT sample:
 ```
-out_path/
-├── raw_dataset/          # Contains the raw dataset (if --save_raw is passed)
-├── tokenized_dataset/    # Contains the tokenized dataset (if --save_tokenized is passed)
-├── tokenizer/            # Contains the tokenizer (if --save_tokenizer is passed)
+python prepare.py \
+  --out_path=/fast/najroldi/data/lm/fwedu/fwedu_sample_10B_tokenizer_GPT2 \
+  --download --tokenize --chunk \
+  --dataset_path='HuggingFaceFW/fineweb-edu' --dataset_split=train --dataset_name='sample-10BT' \
+  --tokenizer='gpt2' \
+  --seq_length=2048 \
+  --split_train_valid \
+  --n_tokens_valid=10000000 \
+  --save_raw --save_tokenized --save_tokenizer \
+```
+
+The output should look like this:
+```
+{out_path}/
+├── raw_dataset/          # Contains the raw dataset
+├── tokenized_dataset/    # Contains the tokenized dataset
+├── tokenizer/            # Contains the tokenizer
 └── ctx_{seq_length}/
     ├── train/            # Contains the training set
     └── valid/            # Contains the validation set
 ```
+
 """
   
 import os
+import multiprocessing as mp
 
 from absl import app, flags
 from functools import partial
+from timeit import default_timer as timer
 from datasets import Dataset, load_from_disk, load_dataset
 from transformers import AutoTokenizer
-from timeit import default_timer as timer
 
-from utils import concat_chunck
+from data.datasets.data_prep_utils import concat_chunck
 
 
-flags.DEFINE_string('out_path', '/fast/najroldi/data/lm/fwedu/test6', 'Path where to save the dataset.')
+# Linux’s default “fork” start method inherits open handles (semaphores/CWD) 
+# in the pymp-* temp directory, leading to OSError on cleanup.
+# Forcing “spawn” via mp.set_start_method("spawn", force=True) 
+# prevents handle inheritance so the temp-dir can be removed safely.
+mp.set_start_method('spawn', force=True)
+
+flags.DEFINE_string('out_path', '/fast/najroldi/data/lm/fwedu/test12', 'Path where to save the dataset.')
 
 flags.DEFINE_boolean('download', False, 'Download the raw dataset.')
 flags.DEFINE_boolean('tokenize', False, 'Tokenize the raw dataset.')
@@ -51,8 +72,8 @@ flags.DEFINE_boolean('chunk', False, 'Chunk the tokenized dataset.')
 
 flags.DEFINE_string('dataset_path', 'HuggingFaceFW/fineweb-edu', 'Path of the dataset to download.')
 flags.DEFINE_string('dataset_split', 'train', 'Split of the dataset to download.')
-flags.DEFINE_string('dataset_name', 'sample-10BT', 'Defines the name of the dataset configuration.')
-flags.DEFINE_list('dataset_columns', ['text'], 'Columns to keep from the dataset.')
+flags.DEFINE_string('dataset_name', None, 'Defines the name of the dataset configuration.')
+flags.DEFINE_list('dataset_columns', None, 'Columns to keep from the dataset.')
 
 flags.DEFINE_boolean('streaming', False, 'Download the dataset in streaming mode. Ignored if `download` is False.')
 flags.DEFINE_integer('nrows', None, 'Number of rows to download. Ignored if `download` is False.')
@@ -71,8 +92,9 @@ FLAGS = flags.FLAGS
 
 
 def tokenize_batched(examples, tokenizer):
+  bos_token = tokenizer.bos_token
   eos_token = tokenizer.eos_token
-  add_eos = lambda seq: (eos_token + seq + eos_token) if seq else seq
+  add_eos = lambda seq: (bos_token + seq + eos_token) if seq else seq
   add_eos_batched = lambda seqs: [add_eos(seq) for seq in seqs]
   tokenized_output = tokenizer(
       add_eos_batched(examples["text"]),
@@ -102,15 +124,15 @@ def main(_):
     if FLAGS.download:
 
         time_start = timer()
-
-        raw_ds = load_dataset(
-            'HuggingFaceFW/fineweb-edu',
-            split = 'train',
-            name='sample-10BT',
-            streaming=FLAGS.streaming,
-            columns=["text"]
-          )
         
+        raw_ds = load_dataset(
+            FLAGS.dataset_path,
+            split=FLAGS.dataset_split,
+            name=FLAGS.dataset_name,
+            streaming=FLAGS.streaming,
+            **({'columns': FLAGS.dataset_columns} if FLAGS.dataset_columns is not None else {}), # NOTE: it works only for Parquet datasets in streaming mode
+          )
+
         if FLAGS.nrows is not None:
           raw_ds = raw_ds.take(FLAGS.nrows)
 
@@ -144,7 +166,7 @@ def main(_):
         # Shuffle so that multiproc has shards of similar size
         raw_ds = raw_ds.shuffle(seed=1996)
 
-        tokenizer = AutoTokenizer.from_pretrained('EleutherAI/gpt-neox-20b')
+        tokenizer = AutoTokenizer.from_pretrained(FLAGS.tokenizer)
         print(f"Length of tokenizer = {len(tokenizer)}")
 
         # Set an high maximum number of tokens that the tokenizer can handle 
