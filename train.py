@@ -84,7 +84,7 @@ def main(_):
   # End of training: log and save checkpoint
   print_master(f"=== Training Completed! ===")
   if master_process and cfg.save_last_checkpoint:
-    save_checkpoint(step, model, engine, cfg, JOB_IDX)
+    save_checkpoint(step, model, engine, cfg, metrics, JOB_IDX)
 
   # DDP slaughtering
   destroy_ddp()
