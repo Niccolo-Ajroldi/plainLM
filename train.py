@@ -44,7 +44,7 @@ def main(_):
   engine = TorchEngine(model, cfg, device, local_rank, ckpt)
 
   # If we are just cooling down, we set budget = resume + cooldown
-  steps_budget = cfg.steps_budget if not cfg.scheduler == "linear_cooldown" else cfg.resume_step + cfg.cooldown_steps
+  steps_budget = cfg.steps_budget if cfg.scheduler != "linear_cooldown" else cfg.resume_step + engine.scheduler.cooldown_steps
   micro_step_budget = steps_budget * cfg.grad_accumulation_steps
   if micro_step_budget > len(trainloader):
     raise ValueError("trainloader too short!")
@@ -62,7 +62,7 @@ def main(_):
   for micro_step, micro_batch in enumerate(trainloader, micro_step_start+1):
     step = micro_step // cfg.grad_accumulation_steps
     is_step = micro_step % cfg.grad_accumulation_steps == 0
-    if step > cfg.steps_budget and is_step:
+    if step > steps_budget and is_step:
       break
 
     # Train
