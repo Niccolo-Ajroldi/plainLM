@@ -56,9 +56,9 @@ def maybe_load_checkpoint(cfg, device):
   if cfg.resume:
     
     # resume from a specified exp or from the same exp
-    exp_name = cfg.resume_exp_name if cfg.resume_exp_name is not None else cfg.exp_name
-    ckpt_dir = os.path.join(cfg.out_dir, exp_name)
-    print(f"Resuming from {ckpt_dir}")
+    # notice that we can resume from `resume_exp_name`, but save to a different `exp_name`
+    resume_exp_name = cfg.resume_exp_name if cfg.resume_exp_name is not None else cfg.exp_name
+    ckpt_dir = os.path.join(cfg.out_dir, resume_exp_name)
     
     # resume from a specified checkpoint or from the latest
     if cfg.resume_step is not None:
