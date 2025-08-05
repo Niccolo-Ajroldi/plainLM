@@ -14,8 +14,8 @@ pip install -r requirements.txt
 ```
 
 ## 📚 Data
-We provide a script for downloading, tokenizing, chunking and saving Hugging Face datasets: `data/datasets/slim_pajama/prepare_train.py`.
-You can specify any HF dataset and tokenizer. To avoid downloading the entire corpus, we stream, tokenize, and chunk data on-the-fly.
+We provide a script for downloading, tokenizing, chunking and saving Hugging Face datasets: `data/datasets/prepare.py`.
+You can specify any HF dataset and tokenizer. To avoid downloading the entire corpus, we support streaming, tokenizing, and chunking data on-the-fly. We provide an example for FineWebEdu-100BT in `data/datasets/prepare_finewebedu_100BT.sh`.
 
 ## ⚡️ Usage
 
