@@ -25,25 +25,6 @@ def intra_doc_causal_mask(doc_boundaries: list, max_seq_length: int, device='cpu
 
     return block_diagonal_mask_bool
 
-def fast_intra_doc_causal_mask(doc_boundaries: list, max_seq_length: int, device='cpu') -> torch.Tensor:
-    # lengths = torch.tensor(doc_boundaries, device=device)
-    lengths = torch.as_tensor(doc_boundaries, dtype=torch.long, device=device)
-    if lengths.sum().item() != max_seq_length:
-        raise ValueError("Sum of doc_boundaries does not match max_seq_length.")
-
-    # assign each token a segment ID
-    seg_ids = torch.arange(len(lengths), device=device).repeat_interleave(lengths)
-    
-    # compute start‐offset of each segment
-    offsets = torch.cat((torch.zeros(1, device=device, dtype=torch.long), lengths.cumsum(0)[:-1]))
-
-    # get position within segment for each token
-    pos = torch.arange(max_seq_length, device=device) - offsets[seg_ids]
-
-    # mask = same segment & causal within it
-    return (seg_ids[:, None] == seg_ids[None, :]) & (pos[:, None] >= pos[None, :])
-
-
 def _get_docs_boundaries(doc_lengths: List[int], n_chunks: int, max_seq_length: int) -> List[List[int]]:
     """
     Get the boundaries of documents in the concatenated chunks.
@@ -118,16 +99,14 @@ def concat_chunck(examples: Dict[str, List[Any]], max_seq_length) -> Dict[str, L
       k: [t[i : i + max_seq_length] for i in range(0, total_length, max_seq_length)] 
       for k, t in concatenated_examples.items()
     }
-    
+
     # Lengths of original documents in the input examples.
     original_docs_lengths = [len(example) for example in examples['input_ids']]
 
     # Number of resulting chunks
     n_chunks = len(result['input_ids'])
-    
-    result['docs_lengths'] = _get_docs_boundaries(original_docs_lengths, n_chunks, max_seq_length)
 
-    # # Convert masks to torch tensors and append to the result.
-    # result['intra_docs_mask'] = [_make_intra_doc_causal_mask(m, max_seq_length) for m in masks]
+    # Retrieve doc boundaries from original document lengths
+    result['docs_lengths'] = _get_docs_boundaries(original_docs_lengths, n_chunks, max_seq_length)
 
     return result

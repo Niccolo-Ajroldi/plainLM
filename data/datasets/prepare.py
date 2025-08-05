@@ -25,12 +25,14 @@ Example: preprocess FineWebEdu 10BT sample:
 python prepare.py \
   --out_path=/fast/najroldi/data/lm/fwedu/fwedu_sample_10B_tokenizer_GPT2 \
   --download --tokenize --chunk \
-  --dataset_path='HuggingFaceFW/fineweb-edu' --dataset_split=train --dataset_name='sample-10BT' \
+  --dataset_path='HuggingFaceFW/fineweb-edu' \
+  --dataset_split=train \
+  --dataset_name='sample-10BT' \
   --tokenizer='gpt2' \
   --seq_length=2048 \
   --split_train_valid \
   --n_tokens_valid=10000000 \
-  --save_raw --save_tokenized --save_tokenizer \
+  --save_raw --save_tokenized --save_tokenizer
 ```
 
 The output should look like this:
@@ -45,9 +47,16 @@ The output should look like this:
 ```
 
 """
-  
+
 import os
 import multiprocessing as mp
+
+# # This will override FileLock globally to use SoftFileLock.
+# # Uncomment on filesystems do not support FileLock.
+# from filelock import SoftFileLock
+# import filelock
+# filelock.FileLock = SoftFileLock
+# os.environ["SOFT_FILELOCK"] = "1"
 
 from absl import app, flags
 from functools import partial
@@ -57,14 +66,14 @@ from transformers import AutoTokenizer
 
 from data.datasets.data_prep_utils import concat_chunck
 
-
 # Linux’s default “fork” start method inherits open handles (semaphores/CWD) 
 # in the pymp-* temp directory, leading to OSError on cleanup.
 # Forcing “spawn” via mp.set_start_method("spawn", force=True) 
 # prevents handle inheritance so the temp-dir can be removed safely.
 mp.set_start_method('spawn', force=True)
 
-flags.DEFINE_string('out_path', '/fast/najroldi/data/lm/fwedu/test12', 'Path where to save the dataset.')
+flags.DEFINE_string('out_path', '/fast/najroldi/data/lm/fwedu/test', 'Path where to save the dataset.')
+flags.DEFINE_string('cache_path', '/fast/najroldi/tmp', 'Cache for download.')
 
 flags.DEFINE_boolean('download', False, 'Download the raw dataset.')
 flags.DEFINE_boolean('tokenize', False, 'Tokenize the raw dataset.')
@@ -130,6 +139,7 @@ def main(_):
             split=FLAGS.dataset_split,
             name=FLAGS.dataset_name,
             streaming=FLAGS.streaming,
+            cache_dir=FLAGS.cache_path,
             **({'columns': FLAGS.dataset_columns} if FLAGS.dataset_columns is not None else {}), # NOTE: it works only for Parquet datasets in streaming mode
           )
 
@@ -161,7 +171,7 @@ def main(_):
         time_start = timer()
 
         if raw_ds is None:
-            raw_ds = load_from_disk(os.path.join(out_path, 'raw_dataset'))
+            raw_ds = load_from_disk(os.path.join(out_path, 'raw_dataset'),)
         
         # Shuffle so that multiproc has shards of similar size
         raw_ds = raw_ds.shuffle(seed=1996)
