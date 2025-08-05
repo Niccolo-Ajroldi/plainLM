@@ -8,13 +8,24 @@ from contextlib import nullcontext
 
 from models import get_param_groups
 from optim import intialize_optimizer, initialize_scheduler
+from data.datasets.data_prep_utils import intra_doc_causal_mask
 
 
-def _move_to_device(batch, seq_len, device):
+def _move_to_device(batch, seq_len, device, intra_doc_masking):
   """Slice batch to get inputs and targets, and move them to device."""
   
   inputs = batch['input_ids'][:,:seq_len]
   targets = batch['input_ids'][:,1:(seq_len+1)]
+
+  if intra_doc_masking:
+    # build one mask per example and stack into (bsz, L, L)
+    masks = [
+      intra_doc_causal_mask(doc_lengths, seq_len+1, device) for doc_lengths in batch['docs_lengths']
+    ]
+    attn_mask = torch.stack(masks, dim=0) # (bsz, L+1, L+1)
+    attn_mask = attn_mask[:, :seq_len, :seq_len].contiguous() # (bsz, L, L)
+  else:
+    attn_mask = None
 
   if 'cuda' in device:
     # pin arrays allows to move them to GPU asynchronously (non_blocking=True)
@@ -23,7 +34,7 @@ def _move_to_device(batch, seq_len, device):
   else:
     inputs, targets = inputs.to(device), targets.to(device)
 
-  return inputs, targets
+  return inputs, targets, attn_mask
 
 
 class TorchEngine(torch.nn.Module):
@@ -48,6 +59,7 @@ class TorchEngine(torch.nn.Module):
     self.accumulation_steps = cfg.grad_accumulation_steps
     self.grad_clip = cfg.grad_clip
     self.dtype = cfg.dtype
+    self.intra_doc_masking = getattr(cfg, "intra_doc_masking", False)
 
     self.device = device
     
@@ -96,7 +108,7 @@ class TorchEngine(torch.nn.Module):
     self.micro_steps += 1
     self.accumulated_samples += 1
 
-    inputs, targets = _move_to_device(batch, self.seq_len, self.device)
+    inputs, targets, attn_mask = _move_to_device(batch, self.seq_len, self.device, self.intra_doc_masking)
 
     # sync (reduce) gradients at the last accumulation step
     if torch.distributed.is_initialized():
@@ -105,7 +117,7 @@ class TorchEngine(torch.nn.Module):
 
     # forward pass with autocasting
     with self.ctx:
-      output = self.model(inputs)
+      output = self.model(inputs, attn_mask)
       logits = getattr(output, 'logits', output)
       loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
       loss = loss / self.accumulation_steps
@@ -150,9 +162,9 @@ class TorchEngine(torch.nn.Module):
     total_loss = 0.0
     num_batches = 0
     for batch in dataloader:
-      inputs, targets = _move_to_device(batch, self.seq_len, self.device)
+      inputs, targets, attn_mask = _move_to_device(batch, self.seq_len, self.device, self.intra_doc_masking)
       with self.ctx:
-        output = self.model(inputs)
+        output = self.model(inputs, attn_mask)
         logits = getattr(output, 'logits', output)
         loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
     

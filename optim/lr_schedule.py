@@ -123,5 +123,5 @@ class LinearCooldown(CustomLRSchedule):
     self.set_optim_lr(lr)
 
   def load_state_dict(self, state_dict):
-    # NOTE: this will add extra keys if loading from WarmupConstant, should be harmless
-    self.__dict__.update(state_dict) 
+    # We load only the iter parameter from the saved state dict.
+    self.iter = state_dict.get("iter", 0)

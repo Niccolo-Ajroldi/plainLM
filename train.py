@@ -31,7 +31,7 @@ def main(_):
     utils.init_wandb(cfg)
     utils.log_job_info(FLAGS)
 
-  # Load checkpoint and starting step
+  # Load checkpoint
   ckpt = maybe_load_checkpoint(cfg, device)
 
   # Dataset
@@ -43,13 +43,16 @@ def main(_):
   # Engine
   engine = TorchEngine(model, cfg, device, local_rank, ckpt)
 
+  # If we are just cooling down, we set budget = resume + cooldown
+  steps_budget = cfg.steps_budget if cfg.scheduler != "linear_cooldown" else cfg.resume_step + engine.scheduler.cooldown_steps
+  micro_step_budget = steps_budget * cfg.grad_accumulation_steps
+  if micro_step_budget > len(trainloader):
+    raise ValueError("trainloader too short!")
+
   # Start the dataloader from the correct micro-batch
   step_start = cfg.resume_step if cfg.resume else 0
   micro_step_start = step_start * cfg.grad_accumulation_steps
-  micro_step_budget = cfg.steps_budget * cfg.grad_accumulation_steps
-  if micro_step_budget > len(trainloader):
-    raise ValueError("trainloader too short!")
-  print_master(f"=== Start Training from step: {step_start}/{cfg.steps_budget}, micro_step: {micro_step_start}/{micro_step_budget} ===")
+  print_master(f"=== Start Training from step: {step_start}/{steps_budget}, micro_step: {micro_step_start}/{micro_step_budget} ===")
 
   # Bookkeeping
   metrics = defaultdict(list)
@@ -59,7 +62,7 @@ def main(_):
   for micro_step, micro_batch in enumerate(trainloader, micro_step_start+1):
     step = micro_step // cfg.grad_accumulation_steps
     is_step = micro_step % cfg.grad_accumulation_steps == 0
-    if step > cfg.steps_budget and is_step:
+    if step > steps_budget and is_step:
       break
 
     # Train
