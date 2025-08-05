@@ -11,7 +11,7 @@ PYTHONPATH=. python data/datasets/prepare.py \
   --out_path="/fast/najroldi/data/lm/slim_pajama/sp_tokenizer_GPTNeoX" \
   --cache_path="/fast/najroldi/tmp" \
   --download --tokenize --chunk \
-  --save_raw --save_tokenized --save_tokenizer \
+  --save_tokenized --save_tokenizer \
   --dataset_path="cerebras/SlimPajama-627B" \
   --dataset_split="train" \
   --dataset_name="sample-100BT" \
