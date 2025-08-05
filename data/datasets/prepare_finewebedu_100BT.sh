@@ -8,7 +8,7 @@ cd ~/plainLM
 
 PYTHONPATH=. python data/datasets/prepare.py \
   --out_path="/fast/najroldi/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX" \
-  --cahce_path="/fast/najroldi/tmp" \
+  --cache_path="/fast/najroldi/tmp" \
   --download --tokenize --chunk \
   --save_tokenized --save_tokenizer \
   --dataset_path="HuggingFaceFW/fineweb-edu" \
