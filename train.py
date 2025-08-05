@@ -31,7 +31,7 @@ def main(_):
     utils.init_wandb(cfg)
     utils.log_job_info(FLAGS)
 
-  # Load checkpoint and starting step
+  # Load checkpoint
   ckpt = maybe_load_checkpoint(cfg, device)
 
   # Dataset

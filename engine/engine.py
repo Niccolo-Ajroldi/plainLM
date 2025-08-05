@@ -23,7 +23,7 @@ def _move_to_device(batch, seq_len, device, intra_doc_masking):
       intra_doc_causal_mask(doc_lengths, seq_len+1, device) for doc_lengths in batch['docs_lengths']
     ]
     attn_mask = torch.stack(masks, dim=0) # (bsz, L+1, L+1)
-    attn_mask = attn_mask[:, :seq_len, :seq_len] # (bsz, L, L)
+    attn_mask = attn_mask[:, :seq_len, :seq_len].contiguous() # (bsz, L, L)
   else:
     attn_mask = None
 
