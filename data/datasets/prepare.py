@@ -73,7 +73,7 @@ from data.datasets.data_prep_utils import concat_chunck
 mp.set_start_method('spawn', force=True)
 
 flags.DEFINE_string('out_path', '/fast/najroldi/data/lm/fwedu/test', 'Path where to save the dataset.')
-flags.DEFINE_string('cache_path', '/fast/najroldi/tmp', 'Cache for download.')
+flags.DEFINE_string('cache_path', '~/.cache/huggingface/datasets', 'Cache for download.')
 
 flags.DEFINE_boolean('download', False, 'Download the raw dataset.')
 flags.DEFINE_boolean('tokenize', False, 'Tokenize the raw dataset.')
