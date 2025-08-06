@@ -218,10 +218,10 @@ def main(_):
         if tokenized_ds is None:
             tokenized_ds = load_from_disk(os.path.join(out_path, 'tokenized_dataset'))
 
-        print("Concatenating and chunking in s of max_seq_length")
         # NOTE: expected token loss by batched concat_chunk, 
         # it truncates leftover tokens that don't fill a full max_seq_length chunk.
         max_seq_length = FLAGS.seq_length + 1
+        print(f"Concatenating and chunking in sequences of length: {max_seq_length}")
         chunked_ds = tokenized_ds.map(
             partial(concat_chunck, max_seq_length=max_seq_length),
             **map_setup
@@ -245,7 +245,6 @@ def main(_):
         # One document might be split across both train and valid splits.
         # We do not shuffle befre chunking, to avoid mulutple documents contamination.
 
-        # n_chunks_valid = 1_000  # ~100M tokens when seq_len=1024
         n_chunks_valid = FLAGS.n_tokens_valid // max_seq_length
         valid_ds = chunked_ds.select(range(n_chunks_valid))
         train_ds = chunked_ds.select(range(n_chunks_valid, len(chunked_ds)))
