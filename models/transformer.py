@@ -56,7 +56,6 @@ class Attention(nn.Module):
         
         if attn_mask is not None:
           attn_mask = attn_mask.unsqueeze(1) # broadcast over heads: (bsz, seqlen, seqlen) -> (bsz, 1, seqlen, seqlen)
-
           out = F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask) # (bsz, nh, seqlen, h_dim)
         else:
           out = F.scaled_dot_product_attention(q, k, v, is_causal=True) # (bsz, nh, seqlen, h_dim)
