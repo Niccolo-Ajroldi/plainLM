@@ -55,12 +55,7 @@ class Attention(nn.Module):
         v = v.transpose(1, 2) # (bsz, nh, seqlen, h_dim)
         
         if attn_mask is not None:
-          # attn_mask has shape (bsz, seqlen, seqlen)
-          # from (bsz, L, L) to (bsz, 1, L, L) so it broadcasts over heads
-          # import pdb
-          # pdb.set_trace()
-          attn_mask = attn_mask.unsqueeze(1)
-          # pdb.set_trace()
+          attn_mask = attn_mask.unsqueeze(1) # broadcast over heads: (bsz, seqlen, seqlen) -> (bsz, 1, seqlen, seqlen)
 
           out = F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask) # (bsz, nh, seqlen, h_dim)
         else:
