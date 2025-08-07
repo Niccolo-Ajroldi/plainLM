@@ -7,9 +7,9 @@ mkdir -p /fast/najroldi/tmp
 cd ~/plainLM
 
 # TRAIN SET
-PYTHONPATH=. python data/datasets/prepare_fancy.py \
+PYTHONPATH=. python data/datasets/prepare.py \
   --out_path="/fast/najroldi/data/lm/slim_pajama/sp_tokenizer_GPTNeoX" \
-  --cahce_path="/fast/najroldi/tmp" \
+  --cache_path="/fast/najroldi/tmp" \
   --download --tokenize --chunk \
   --save_raw --save_tokenized --save_tokenizer \
   --dataset_path="cerebras/SlimPajama-627B" \
@@ -19,9 +19,9 @@ PYTHONPATH=. python data/datasets/prepare_fancy.py \
   --seq_length=2048
 
 # VALID SET
-PYTHONPATH=. python data/datasets/prepare_fancy.py \
+PYTHONPATH=. python data/datasets/prepare.py \
   --out_path="/fast/najroldi/data/lm/slim_pajama/sp_tokenizer_GPTNeoX" \
-  --cahce_path="/fast/najroldi/tmp" \
+  --cache_path="/fast/najroldi/tmp" \
   --download --tokenize --chunk \
   --save_raw --save_tokenized --save_tokenizer \
   --dataset_path="cerebras/SlimPajama-627B" \

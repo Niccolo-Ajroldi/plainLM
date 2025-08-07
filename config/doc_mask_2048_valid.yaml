@@ -1,0 +1,75 @@
+## CONFIG file
+## change paths with your own!
+
+deterministic: False
+seed: 100
+
+trainset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_10B_tokenizer_GPT2/ctx_2048/train" # tokens: 9_849_288_704
+vocab_size: 50257
+seq_len: 2048
+intra_doc_masking: [True, False]
+sampler: 'sequential'
+sampler_seed: 1996
+num_workers: 4
+
+eval: True
+validset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_10B_tokenizer_GPT2/ctx_2048/valid"
+valid_tokens: 1_000_000
+eval_every_steps: 100
+
+model: 'transformer'
+d_model: 768
+mlp_class: 'glu'
+expand: '8/3'
+n_layers: 12
+n_heads: 12
+rms_norm: True
+tie_embeddings: True
+torch_compile: True
+
+# note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
+steps_budget: 18500
+
+# note: this is micro batch size if grad_accumulation_steps>1
+# note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
+micro_batch_size: 32
+grad_accumulation_steps: 2
+
+# note: choose between {float32, float16, bfloat16}
+# note: float16 data type will automatically use a GradScaler
+dtype: 'bfloat16'
+
+optim: 'adamw'
+fused_optim: True
+lr: 3.e-3
+weight_decay: 0.1
+beta1: 0.9
+beta2: 0.95
+grad_clip: 1.0
+
+scheduler: 'wsd'
+warmup_steps: 0.01
+cooldown_steps: 0.2
+lr_start: 0.0
+lr_end: 0.0
+lr_end_pct: null
+
+log_every_steps: 50
+print_progress: True
+
+use_wandb: True
+wandb_project: 'doc_mask'
+wandb_dir: '/fast/najroldi/logs/doc_mask/wandb'
+wandb_run_name: '130M_valid'
+exp_name: '130M_valid'
+out_dir: '/fast/najroldi/exp/doc_mask'
+over_write: False
+
+resume: False
+resume_micro_step: null
+resume_exp_name: null
+
+save_last_checkpoint: False
+save_intermediate_checkpoints: False
+save_every_steps: null
+

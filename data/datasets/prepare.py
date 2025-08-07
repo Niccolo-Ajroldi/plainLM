@@ -53,9 +53,8 @@ import multiprocessing as mp
 
 # # This will override FileLock globally to use SoftFileLock.
 # # Uncomment on filesystems do not support FileLock.
-# from filelock import SoftFileLock
 # import filelock
-# filelock.FileLock = SoftFileLock
+# filelock.FileLock = filelock.SoftFileLock
 # os.environ["SOFT_FILELOCK"] = "1"
 
 from absl import app, flags
@@ -73,7 +72,7 @@ from data.datasets.data_prep_utils import concat_chunck
 mp.set_start_method('spawn', force=True)
 
 flags.DEFINE_string('out_path', '/fast/najroldi/data/lm/fwedu/test', 'Path where to save the dataset.')
-flags.DEFINE_string('cache_path', '/fast/najroldi/tmp', 'Cache for download.')
+flags.DEFINE_string('cache_path', '~/.cache/huggingface/datasets', 'Cache for download.')
 
 flags.DEFINE_boolean('download', False, 'Download the raw dataset.')
 flags.DEFINE_boolean('tokenize', False, 'Tokenize the raw dataset.')
@@ -121,6 +120,8 @@ def main(_):
     out_path = FLAGS.out_path
     if not os.path.exists(out_path):
         os.makedirs(out_path, exist_ok=True)
+
+    tokenizer_name = FLAGS.tokenizer.replace('/', '_') if FLAGS.tokenizer is not None else None # sanitize name for paths
 
     map_setup = dict(
         batched=True,
@@ -195,16 +196,16 @@ def main(_):
             tokenizer.model_max_length = FLAGS.seq_length
 
         if FLAGS.save_tokenized:
-            if os.path.exists(os.path.join(out_path, 'tokenized_dataset')):
+            if os.path.exists(os.path.join(out_path, f"tokenized_{tokenizer_name}", 'tokenized_dataset')):
                 raise FileExistsError("Tokenized dataset already exists.")
             print("Saving Tokenized Dataset")
-            tokenized_ds.save_to_disk(os.path.join(out_path, 'tokenized_dataset'))
+            tokenized_ds.save_to_disk(os.path.join(out_path, f"tokenized_{tokenizer_name}", 'tokenized_dataset'))
         
         if FLAGS.save_tokenizer:
-            if os.path.exists(os.path.join(out_path, 'tokenizer')):
+            if os.path.exists(os.path.join(out_path, f"tokenized_{tokenizer_name}", 'tokenizer')):
                 raise FileExistsError("Tokenizer already exists.")
             print("Saving Tokenizer")
-            tokenizer.save_pretrained(os.path.join(out_path, "tokenizer"))
+            tokenizer.save_pretrained(os.path.join(out_path, f"tokenized_{tokenizer_name}", 'tokenizer'))
 
         elapsed = timer() - time_start
         print(f"Tokenization time: {elapsed // 60} min")
@@ -216,11 +217,15 @@ def main(_):
         time_start = timer()
 
         if tokenized_ds is None:
-            tokenized_ds = load_from_disk(os.path.join(out_path, 'tokenized_dataset'))
+            tokenized_ds = load_from_disk(os.path.join(out_path, f"tokenized_{tokenizer_name}", 'tokenized_dataset'))
 
-        print("Concatenating and chunking in s of max_seq_length")
+        tokenized_ds = tokenized_ds.remove_columns(
+            [c for c in tokenized_ds.column_names if c != "input_ids"]
+        )
+
         # NOTE: expected token loss by batched concat_chunk, 
         # it truncates leftover tokens that don't fill a full max_seq_length chunk.
+        print("Concatenating and chunking in s of max_seq_length")
         max_seq_length = FLAGS.seq_length + 1
         chunked_ds = tokenized_ds.map(
             partial(concat_chunck, max_seq_length=max_seq_length),
@@ -245,7 +250,6 @@ def main(_):
         # One document might be split across both train and valid splits.
         # We do not shuffle befre chunking, to avoid mulutple documents contamination.
 
-        # n_chunks_valid = 1_000  # ~100M tokens when seq_len=1024
         n_chunks_valid = FLAGS.n_tokens_valid // max_seq_length
         valid_ds = chunked_ds.select(range(n_chunks_valid))
         train_ds = chunked_ds.select(range(n_chunks_valid, len(chunked_ds)))
@@ -256,8 +260,8 @@ def main(_):
         train_ds = train_ds.shuffle(seed=96)
         valid_ds = valid_ds.shuffle(seed=96)
 
-        train_ds_path = os.path.join(out_path, f"ctx_{FLAGS.seq_length}", 'train')
-        valid_ds_path = os.path.join(out_path, f"ctx_{FLAGS.seq_length}", 'valid')
+        train_ds_path = os.path.join(out_path, f"tokenized_{tokenizer_name}", f"ctx_{FLAGS.seq_length}", 'train')
+        valid_ds_path = os.path.join(out_path, f"tokenized_{tokenizer_name}", f"ctx_{FLAGS.seq_length}", 'valid')
 
         if os.path.exists(train_ds_path):
             raise FileExistsError("Trainset already exists.")
@@ -269,6 +273,7 @@ def main(_):
         print("Saving validset")
         valid_ds.save_to_disk(valid_ds_path)
 
+    print("Succesfull completion.")
 
 if __name__ == "__main__":
     app.run(main)
