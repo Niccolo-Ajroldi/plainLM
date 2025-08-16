@@ -7,17 +7,17 @@ seed: 100
 trainset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_10B_tokenizer_GPT2/ctx_2048/train" # tokens: 9_849_288_704
 vocab_size: 50257
 seq_len: 2048
-intra_doc_masking: [True, False]
-sampler: 'sequential'
+intra_doc_masking: False
+sampler: 'stateful_random'
 sampler_seed: 1996
 num_workers: 4
 
 eval: True
-validset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_10B_tokenizer_GPT2/ctx_2048/valid"
+validset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_10B_tokenizer_GPT2/ctx_2048/train"
 valid_tokens: 1_000_000
 eval_every_steps: 100
 
-model: 'transformer'
+model: 'pythia-160m'
 d_model: 768
 mlp_class: 'glu'
 expand: '8/3'
@@ -60,16 +60,16 @@ print_progress: True
 use_wandb: True
 wandb_project: 'doc_mask'
 wandb_dir: '/fast/najroldi/logs/doc_mask/wandb'
-wandb_run_name: '130M_valid'
-exp_name: '130M_valid'
+wandb_run_name: '130M_save_01'
+exp_name: '130M_save_01'
 out_dir: '/fast/najroldi/exp/doc_mask'
-over_write: False
+over_write: True
 
 resume: False
-resume_micro_step: null
+resume_step: null
 resume_exp_name: null
 
-save_last_checkpoint: False
-save_intermediate_checkpoints: False
-save_every_steps: null
+save_last_checkpoint: True
+save_intermediate_checkpoints: True
+save_every_steps: 500
 

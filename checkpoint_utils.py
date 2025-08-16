@@ -17,17 +17,24 @@ def _latest_checkpoint(ckpt_dir: str, prefix: str = 'checkpoint_') -> str | None
 
   return os.path.join(ckpt_dir, checkpoints[-1]) if checkpoints else None
 
-
 def save_checkpoint(step, model, engine, cfg, metrics, job_idx=None):
 
   optimizer = engine.optimizer
   scheduler = engine.scheduler
   scaler = engine.scaler
 
-  save_optim = getattr(cfg, 'save_optim', True)
-  save_scheduler = getattr(cfg, 'save_scheduler', True)
-  save_scaler = getattr(cfg, 'save_scaler', True)
+  ## old logic
+  # save_optim = getattr(cfg, 'save_optim', True)
+  # save_scheduler = getattr(cfg, 'save_scheduler', True)
+  # save_scaler = getattr(cfg, 'save_scaler', True)
 
+  ## new logic
+  save_optim_every_steps = getattr(cfg, 'save_optim_every_steps', cfg.save_every_steps)
+  is_time_to_save_optim = (step % save_optim_every_steps == 0)
+  save_optim = is_time_to_save_optim
+  save_scheduler = is_time_to_save_optim
+  save_scaler = is_time_to_save_optim
+  
   state = {
     "step": step,
     "state_dict": model.state_dict(),

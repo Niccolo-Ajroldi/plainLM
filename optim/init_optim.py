@@ -1,7 +1,8 @@
 """Intialize optimizer and scheduler."""
 
 import torch
-from .lr_schedule import WarmupCosine, WSD, WarmupConstant, LinearCooldown
+from .lr_schedule import WarmupCosine, WarmupLinearDecay, WSD, WarmupConstant, LinearCooldown
+from .albertw import AlbertW
 
 
 def intialize_optimizer(param_groups, cfg):
@@ -20,6 +21,15 @@ def intialize_optimizer(param_groups, cfg):
       eps=getattr(cfg, 'eps', 1e-8)
     )
   
+  elif cfg.optim == 'albertw':
+    optimizer = AlbertW(
+      param_groups,
+      lr=cfg.lr,
+      betas=[cfg.beta1, cfg.beta2],
+      weight_decay=cfg.weight_decay,
+      eps=getattr(cfg, 'eps', 1e-8)
+    )
+
   elif cfg.optim == 'nadamw':
     optimizer = torch.optim.NAdam(
       param_groups,
@@ -91,6 +101,16 @@ def initialize_scheduler(optimizer, cfg):
 
   if cfg.scheduler == "warmup_cosine":
     scheduler = WarmupCosine(
+      optimizer,
+      lr_start=cfg.lr_start,
+      lr_max=cfg.lr,
+      lr_end=lr_end,
+      warmup_steps=warmup_steps,
+      T=cfg.steps_budget,
+    )
+
+  elif cfg.scheduler == "warmup_linear_decay":
+    scheduler = WarmupLinearDecay(
       optimizer,
       lr_start=cfg.lr_start,
       lr_max=cfg.lr,

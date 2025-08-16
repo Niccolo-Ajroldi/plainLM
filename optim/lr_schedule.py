@@ -52,6 +52,30 @@ class WarmupCosine(CustomLRSchedule):
     self.set_optim_lr(lr)
 
 
+class WarmupLinearDecay(CustomLRSchedule):
+  """Linear warmup followed by linear decay."""
+  def __init__(self, optimizer, lr_start, lr_max, lr_end, warmup_steps, T):
+    super().__init__(optimizer)
+    self.lr_start = lr_start
+    self.lr_max = lr_max
+    self.lr_end = lr_end
+    self.warmup_steps = warmup_steps
+    self.T = T
+    self.iter = 0
+    self.set_optim_lr(lr_start)
+
+  def get_lr(self, t):
+    if t <= self.warmup_steps:
+      return self.lr_start + (self.lr_max - self.lr_start) / self.warmup_steps * t
+    elif t <= self.T:
+      return self.lr_max + (self.lr_end-self.lr_max) / (self.T-self.warmup_steps) * (t-self.warmup_steps)
+    return self.lr_end
+
+  def step(self):
+    self.iter += 1
+    self.set_optim_lr(self.get_lr(self.iter))
+
+
 class WSD(CustomLRSchedule):
   """Trapezoidal schedule / WSD: (linear) Warmup + Stable + (linear) Decay."""
   def __init__(self, optimizer, lr_start, lr_max, lr_end, warmup_steps, cooldown_start_step, cooldown_steps):

@@ -7,8 +7,8 @@ seed: 100
 trainset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_10B_tokenizer_GPT2/ctx_2048/train" # tokens: 9_849_288_704
 vocab_size: 50257
 seq_len: 2048
-intra_doc_masking: [True, False]
-sampler: 'sequential'
+intra_doc_masking: False
+sampler: 'stateful_random'
 sampler_seed: 1996
 num_workers: 4
 
@@ -41,7 +41,7 @@ dtype: 'bfloat16'
 
 optim: 'adamw'
 fused_optim: True
-lr: [1.e-4, 3.e-4, 1.e-3, 3.e-3, 1.e-2]
+lr: 3.e-3
 weight_decay: 0.1
 beta1: 0.9
 beta2: 0.95
@@ -54,22 +54,22 @@ lr_start: 0.0
 lr_end: 0.0
 lr_end_pct: null
 
-log_every_steps: 50
+log_every_steps: 1
 print_progress: True
 
 use_wandb: True
 wandb_project: 'doc_mask'
 wandb_dir: '/fast/najroldi/logs/doc_mask/wandb'
-wandb_run_name: 'sweep_130M_01'
-exp_name: 'sweep_130M_01'
+wandb_run_name: 'test_mem'
+exp_name: 'test_mem'
 out_dir: '/fast/najroldi/exp/doc_mask'
 over_write: True
 
 resume: False
-resume_micro_step: null
+resume_step: null
 resume_exp_name: null
 
-save_last_checkpoint: True
-save_intermediate_checkpoints: True
-save_every_steps: 500
+save_last_checkpoint: False
+save_intermediate_checkpoints: False
+save_every_steps: null
 
