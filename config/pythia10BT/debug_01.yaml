@@ -32,13 +32,14 @@ grad_accumulation_steps: 4
 # note: float16 data type will automatically use a GradScaler
 dtype: 'bfloat16'
 
-optim: 'adamw'
+optim: 'custom_adam'
 fused_optim: True
 lr: 3.e-3
 weight_decay: 0.1
 beta1: 0.9
 beta2: 0.95
 grad_clip: 1.0
+corrected_weight_decay: True
 
 scheduler: 'wsd'
 warmup_steps: 0.01

@@ -6,7 +6,6 @@ from torch.nn import CrossEntropyLoss
 from torch.nn.parallel import DistributedDataParallel as DDP
 from contextlib import nullcontext
 
-from models import get_param_groups
 from optim import intialize_optimizer, initialize_scheduler
 from data.datasets.data_prep_utils import intra_doc_causal_mask
 
@@ -60,6 +59,7 @@ class TorchEngine(torch.nn.Module):
     self.intra_doc_masking = getattr(cfg, "intra_doc_masking", False)
 
     self.device = device
+    self.model = model
     
     # Load model state dict
     if cfg.resume:
@@ -67,11 +67,11 @@ class TorchEngine(torch.nn.Module):
       self.micro_steps = ckpt['step'] * cfg.grad_accumulation_steps
 
     # Move model to device and to DDP
-    self.model = model.to(device)
+    self.model = self.model.to(device)
     if torch.distributed.is_initialized():
       self.model = DDP(self.model, device_ids=[local_rank])
 
-    # Compile
+    # Compile after DDP (https://github.com/pytorch/pytorch/issues/107362#issuecomment-1682658771)
     if cfg.torch_compile:
       print(f"Compiling the model...")
       self.model = torch.compile(self.model)
@@ -87,9 +87,8 @@ class TorchEngine(torch.nn.Module):
     # Loss
     self.criterion = CrossEntropyLoss()
 
-    # Optimizer
-    param_groups = get_param_groups(model, cfg.weight_decay)
-    self.optimizer = intialize_optimizer(param_groups, cfg)
+    # Optimizer and scheduler
+    self.optimizer = intialize_optimizer(self.model, cfg)
     self.scheduler = initialize_scheduler(self.optimizer, cfg)
 
     if cfg.resume:

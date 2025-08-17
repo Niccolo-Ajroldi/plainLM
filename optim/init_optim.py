@@ -1,18 +1,18 @@
 """Intialize optimizer and scheduler."""
 
-import torch
 from .lr_schedule import WarmupCosine, WarmupLinearDecay, WSD, WarmupConstant, LinearCooldown
-from .adamwcustom import AdamWCustom
 
 
-def intialize_optimizer(param_groups, cfg):
+def intialize_optimizer(model, cfg):
   """
   Intialize an optimizer.
   NOTE: we pass weight_decay to optim, but it gets overwritten by the weight_decay in param_groups!
   """
   
   if cfg.optim == 'adamw':
-    optimizer = torch.optim.AdamW(
+    from torch.optim import AdamW
+    param_groups = get_param_groups_default(model, cfg)
+    optimizer = AdamW(
       param_groups,
       lr=cfg.lr,
       betas=[cfg.beta1, cfg.beta2],
@@ -20,18 +20,23 @@ def intialize_optimizer(param_groups, cfg):
       fused=cfg.fused_optim,
       eps=getattr(cfg, 'eps', 1e-8)
     )
-  
-  elif cfg.optim == 'adamw_custom':
-    optimizer = AdamWCustom(
+
+  elif cfg.optim == 'custom_adam':
+    from .custom_adam import CustomAdam, get_param_groups_custom_adam
+    param_groups = get_param_groups_custom_adam(model, cfg)
+    optimizer = CustomAdam(
       param_groups,
       lr=cfg.lr,
       betas=[cfg.beta1, cfg.beta2],
       weight_decay=cfg.weight_decay,
+      corrected_weight_decay=cfg.corrected_weight_decay,
       eps=getattr(cfg, 'eps', 1e-8)
     )
 
   elif cfg.optim == 'nadamw':
-    optimizer = torch.optim.NAdam(
+    from torch.optim import NAdam
+    param_groups = get_param_groups_default(model, cfg)
+    optimizer = NAdam(
       param_groups,
       lr=cfg.lr,
       betas=[cfg.beta1, cfg.beta2],
@@ -42,7 +47,9 @@ def intialize_optimizer(param_groups, cfg):
     )
   
   elif cfg.optim == 'sgd':
-    optimizer = torch.optim.SGD(
+    from torch.optim import SGD
+    param_groups = get_param_groups_default(model, cfg)
+    optimizer = SGD(
       param_groups,
       lr=cfg.lr,
       momentum=cfg.beta1,
@@ -52,6 +59,7 @@ def intialize_optimizer(param_groups, cfg):
   
   elif cfg.optim == 'signSGD':
     from .signSGD import signSGD
+    param_groups = get_param_groups_default(model, cfg)
     optimizer = signSGD(
       param_groups,
       lr=cfg.lr,
@@ -62,6 +70,7 @@ def intialize_optimizer(param_groups, cfg):
   
   elif cfg.optim == 'sfo_adamw':
     import schedulefree
+    param_groups = get_param_groups_default(model, cfg)
     # warmup steps for schedulefree must be specified here
     warmup_steps = cfg.warmup_steps if isinstance(cfg.warmup_steps, int) \
       else int(cfg.warmup_steps * cfg.steps_budget)
@@ -154,3 +163,40 @@ def initialize_scheduler(optimizer, cfg):
   
   return scheduler
 
+
+def get_param_groups_default(model, cfg):
+  """
+    Create param groups for a Transformer model.
+    Bias and normalization layers are excluded from weight decay.
+  """
+
+  # filter out parameters that do not require grad
+  named_param_dict = {n: p for n,p in model.named_parameters() if p.requires_grad}
+  param_names = named_param_dict.keys()
+
+  # normaliz
+  norm_param_names = [n for n in param_names if "norm" in n]
+  norm_params = [p for n, p in named_param_dict.items() if n in norm_param_names]
+
+  # bias
+  bias_param_names = [n for n in param_names if "bias" in n and n not in norm_param_names]
+  bias_params = [p for n, p in named_param_dict.items() if n in bias_param_names]
+
+  # all the ohers params
+  norm_and_bias_names = norm_param_names + bias_param_names
+  other_param_names = [n for n in param_names if n not in norm_and_bias_names]
+  other_params = [p for n, p in named_param_dict.items() if n in other_param_names]
+
+  # assemble param groups
+  param_groups = [
+    dict(params=norm_params,    weight_decay=0.0,),
+    dict(params=bias_params,    weight_decay=0.0,),
+    dict(params=other_params,   weight_decay=cfg.weight_decay,),
+  ]
+
+  # # sanity check
+  # print("bias_param_names:\n\t" + "\n\t".join(bias_param_names))
+  # print("norm_param_names:\n\t" + "\n\t".join(norm_param_names))
+  # print("other_param_names:\n\t" + "\n\t".join(other_param_names))
+
+  return param_groups
