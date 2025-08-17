@@ -81,6 +81,28 @@ def intialize_optimizer(model, cfg):
       betas=[cfg.beta1, cfg.beta2],
       weight_decay=cfg.weight_decay,
     )
+
+  elif cfg.optim == 'muon':
+    from dion import Muon
+    from .custom_muon import get_param_groups_muon
+    param_groups = get_param_groups_muon(model, cfg)
+    optimizer = Muon(
+      param_groups,
+      lr=cfg.lr,
+      betas=[cfg.beta1, cfg.beta2],
+      weight_decay=cfg.weight_decay,
+    )
+
+  elif cfg.optim == 'dion':
+    from dion import Dion
+    from .custom_muon import get_param_groups_muon
+    param_groups = get_param_groups_muon(model, cfg)
+    optimizer = Dion(
+      param_groups,
+      lr=cfg.lr,
+      betas=[cfg.beta1, cfg.beta2],
+      weight_decay=cfg.weight_decay,
+    )
   
   else:
     raise NotImplementedError(f"Not implemented optim: {cfg.optim}.")

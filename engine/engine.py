@@ -57,6 +57,7 @@ class TorchEngine(torch.nn.Module):
     self.grad_clip = cfg.grad_clip
     self.dtype = cfg.dtype
     self.intra_doc_masking = getattr(cfg, "intra_doc_masking", False)
+    self.log_grad_norms = getattr(cfg, "log_grad_norms", False)
 
     self.device = device
     self.model = model
@@ -107,6 +108,8 @@ class TorchEngine(torch.nn.Module):
 
     inputs, targets, attn_mask = _move_to_device(batch, self.seq_len, self.device, self.intra_doc_masking)
 
+    grad_norms = None
+
     # sync (reduce) gradients at the last accumulation step
     if torch.distributed.is_initialized():
       self.model.require_backward_grad_sync = \
@@ -131,9 +134,16 @@ class TorchEngine(torch.nn.Module):
     if self.accumulated_samples == self.accumulation_steps:
       self.accumulated_samples = 0
 
+      # optionally log grad norms
+      if self.log_grad_norms:
+        grad_norms = {
+          'l1_norm': torch.nn.utils.get_total_norm(self.model.parameters(), norm_type=1),
+          'l2_norm': torch.nn.utils.get_total_norm(self.model.parameters(), norm_type=2),
+        }
+
       if self.grad_clip:
         self.scaler.unscale_(self.optimizer)
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip) # after backward(), grads are already all-reduced
 
       # step the optimizer, step the scaler if training in fp16
       self.scaler.step(self.optimizer)
@@ -146,7 +156,7 @@ class TorchEngine(torch.nn.Module):
       if self.scheduler:
         self.scheduler.step()
   
-    return loss_val
+    return loss_val, grad_norms
 
 
   @torch.no_grad()

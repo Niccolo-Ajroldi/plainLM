@@ -66,7 +66,7 @@ def main(_):
       break
 
     # Train
-    train_loss = engine.step(micro_batch)
+    train_loss, grad_norms = engine.step(micro_batch)
     train_loss_array.append(train_loss)
 
     # Eval
@@ -77,7 +77,7 @@ def main(_):
 
     # Log
     if master_process and step % cfg.log_every_steps == 0 and is_step:
-      utils.log(cfg, metrics, micro_step, train_loss, train_loss_array, valid_loss, engine.optimizer, world_size)
+      utils.log(cfg, metrics, micro_step, train_loss, train_loss_array, valid_loss, engine.optimizer, world_size, grad_norms)
       train_loss_array = []
 
     # Checkpoint

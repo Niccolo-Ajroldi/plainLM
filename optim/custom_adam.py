@@ -61,7 +61,6 @@ class CustomAdam(torch.optim.Optimizer):
       eps = group['eps']
       max_lr = self.defaults['lr'] if group['corrected_weight_decay'] else None
 
-      import pdb; pdb.set_trace()  # Debugging breakpoint
       for p in group['params']:
         if p.grad is None:
             continue 

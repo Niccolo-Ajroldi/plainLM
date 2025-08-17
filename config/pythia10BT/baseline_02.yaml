@@ -5,7 +5,7 @@ deterministic: False
 seed: 100
 
 trainset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_10BT/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train" # tokens: 9_849_288_704
-vocab_size: 50257
+vocab_size: 50277
 seq_len: 2048
 intra_doc_masking: False
 sampler: 'stateful_random'
@@ -13,34 +13,37 @@ sampler_seed: 1996
 num_workers: 4
 
 eval: True
-validset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_10BT/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train"
-valid_tokens: 1_000_000
+validset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_10BT/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
+valid_tokens: 1000000  # 1M
 eval_every_steps: 100
 
 model: 'pythia-160m'
 torch_compile: True
+
+# Allow TF32 matmul for speedups on Ampere+ GPUs
+cuda_matmul_allow_tf32: True
+cudnn_allow_tf32: True
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
 steps_budget: 18500
 
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
-micro_batch_size: 16
-grad_accumulation_steps: 4
+micro_batch_size: 32
+grad_accumulation_steps: 1
 
 # note: choose between {float32, float16, bfloat16}
 # note: float16 data type will automatically use a GradScaler
 dtype: 'bfloat16'
 
 optim: 'custom_adam'
-# optim_backup: 'adamw'
 fused_optim: True
-lr: 3.e-3
+lr: [1.e-3, 3.e-3, 1.e-2]
 weight_decay: 0.1
 beta1: 0.9
 beta2: 0.95
 grad_clip: 1.0
-corrected_weight_decay: True
+corrected_weight_decay: [False, True]
 log_grad_norms: True
 
 scheduler: 'wsd'
@@ -50,21 +53,22 @@ lr_start: 0.0
 lr_end: 0.0
 lr_end_pct: null
 
-log_every_steps: 1
+log_every_steps: 50
 print_progress: True
 
-use_wandb: False
+use_wandb: True
 wandb_project: 'quant'
 wandb_dir: '/fast/najroldi/logs/quant/wandb'
-wandb_run_name: 'debug_01'
-exp_name: 'debug_01'
-out_dir: '/fast/najroldi/exp/quant'
-over_write: False
+wandb_run_name: 'pythia_160M_10BT_baseline_02'
+exp_name: 'pythia_160M_10BT_baseline_02'
+out_dir: '/fast/atatjer/scalinglawsquantization/checkpoints'
+over_write: True
 
 resume: False
 resume_step: null
 resume_exp_name: null
 
-save_last_checkpoint: False
-save_intermediate_checkpoints: False
-save_every_steps: null
+save_last_checkpoint: True
+save_intermediate_checkpoints: True
+save_every_steps: 500 # save the model every X steps
+save_optim_every_steps: 500 # save optimizer every Y steps (if not specified, will default to save_every_steps)
