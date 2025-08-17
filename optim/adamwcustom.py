@@ -1,7 +1,7 @@
 import torch
 import math
 
-class AlbertW(torch.optim.Optimizer):
+class AdamWCustom(torch.optim.Optimizer):
   """A custom AdamW implementation that tracks the update in the state (offloaded to CPU)."""
 
   def __init__(self, params, lr=0.001, betas=(0.9, 0.999), weight_decay=0., eps=1e-8):
@@ -17,7 +17,7 @@ class AlbertW(torch.optim.Optimizer):
       raise ValueError(f"Invalid weight_decay value: {weight_decay}")
 
     defaults = dict(lr=lr, betas=betas, weight_decay=weight_decay, eps=eps)
-    super(AlbertW, self).__init__(params, defaults)
+    super(AdamWCustom, self).__init__(params, defaults)
 
     self.state['tot_steps'] = 0 # this is necessary for bias correction
 

@@ -2,7 +2,7 @@
 
 import torch
 from .lr_schedule import WarmupCosine, WarmupLinearDecay, WSD, WarmupConstant, LinearCooldown
-from .albertw import AlbertW
+from .adamwcustom import AdamWCustom
 
 
 def intialize_optimizer(param_groups, cfg):
@@ -21,8 +21,8 @@ def intialize_optimizer(param_groups, cfg):
       eps=getattr(cfg, 'eps', 1e-8)
     )
   
-  elif cfg.optim == 'albertw':
-    optimizer = AlbertW(
+  elif cfg.optim == 'adamw_custom':
+    optimizer = AdamWCustom(
       param_groups,
       lr=cfg.lr,
       betas=[cfg.beta1, cfg.beta2],
