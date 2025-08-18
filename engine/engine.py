@@ -137,8 +137,8 @@ class TorchEngine(torch.nn.Module):
       # optionally log grad norms
       if self.log_grad_norms:
         grad_norms = {
-          'l1_norm': torch.nn.utils.get_total_norm(self.model.parameters(), norm_type=1),
-          'l2_norm': torch.nn.utils.get_total_norm(self.model.parameters(), norm_type=2),
+          'l1_norm': torch.nn.utils.get_total_norm(self.model.parameters(), norm_type=1).item(),
+          'l2_norm': torch.nn.utils.get_total_norm(self.model.parameters(), norm_type=2).item(),
         }
 
       if self.grad_clip:

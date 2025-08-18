@@ -1,12 +1,12 @@
 
 # Executable should be a full path
-executable=/home/najroldi/plainLM/cluster/multi_gpu/condor.sh
+executable=/home/najroldi/plainLM/cluster/multi_gpu_muon/condor.sh
 
 # Hyperparmeters are specified in a YAML configuration file
-config=config/pythia100BT/baseline_02.yaml
+config=config/pythia10BT/baseline_03.yaml
 
 # Queue as many jobs as points in the hyperaparameter grid
-n_jobs=2
+n_jobs=5
 
 # Pass arguments to the executable
 arguments = $(config) $(Process) $(Cluster)
@@ -21,8 +21,8 @@ log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 request_memory = 500000
 request_cpus = 16
 request_gpus = 8
-# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
-requirements = (TARGET.CUDACapability == 9.0)
+requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
+# requirements = (TARGET.CUDACapability == 9.0)
 # requirements =  (TARGET.CUDACapability >= 8.0) && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB")
 
 queue $(n_jobs)

@@ -33,7 +33,7 @@ def get_param_groups_muon(model, cfg):
     dict(params=norm_params,    algorithm=cfg.optim_backup, weight_decay=0.0),
     dict(params=embed_params,   algorithm=cfg.optim_backup, weight_decay=cfg.weight_decay),
     dict(params=lm_head_params, algorithm=cfg.optim_backup, weight_decay=cfg.weight_decay),
-    dict(params=matrix_params,  algorithm=cfg.optim, weight_decay=cfg.weight_decay), # TODO: remove wd on matrices?
+    dict(params=matrix_params,  algorithm=cfg.optim,        weight_decay=cfg.weight_decay), # TODO: remove wd on matrices?
     
   ]
 
