@@ -15,7 +15,7 @@ def construct_model(cfg):
       expand = float(Fraction(cfg.expand)),
       n_layers = cfg.n_layers,
       n_heads = cfg.n_heads,
-      rmsorm_eps = 1e-6,
+      rmsnorm_eps = 1e-6,
       mlp = cfg.mlp_class,
       seq_len = cfg.seq_len,
       tie_embeddings = cfg.tie_embeddings
