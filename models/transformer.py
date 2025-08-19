@@ -68,9 +68,9 @@ class Block(nn.Module):
     def __init__(self, layer_id: int, cfg: ModelConfig):
         super().__init__()
         self.attn = Attention(cfg)
-        self.attn_norm = RMSNorm(cfg.dim, cfg.rmsorm_eps)
+        self.attn_norm = RMSNorm(cfg.dim, cfg.rmsnorm_eps)
         self.mlp = MLP_CLASSES[cfg.mlp](dim=cfg.dim, hidden_dim=int(cfg.expand * cfg.dim))
-        self.mlp_norm = RMSNorm(cfg.dim, cfg.rmsorm_eps)
+        self.mlp_norm = RMSNorm(cfg.dim, cfg.rmsnorm_eps)
         self.layer_id = layer_id
     
     def forward(self, x, freqs_cis, attn_mask):
