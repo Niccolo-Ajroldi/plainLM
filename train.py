@@ -2,6 +2,7 @@
 
 from absl import app, flags
 from collections import defaultdict
+import torch
 
 import utils
 from utils import print_master
@@ -38,7 +39,8 @@ def main(_):
   trainloader, validloader = get_dataloaders(cfg)
 
   # Model
-  model, _ = construct_model(cfg)
+  with torch.device("meta"):
+    model, _ = construct_model(cfg)
 
   # Engine
   engine = TorchEngine(model, cfg, device, local_rank, ckpt)

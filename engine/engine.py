@@ -4,6 +4,8 @@ import torch
 from torch import distributed as dist
 from torch.nn import CrossEntropyLoss
 from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.distributed.fsdp import fully_shard, MixedPrecisionPolicy
+
 from contextlib import nullcontext
 
 from models import get_param_groups
@@ -62,26 +64,30 @@ class TorchEngine(torch.nn.Module):
     self.intra_doc_masking = getattr(cfg, "intra_doc_masking", False)
 
     self.device = device
+    self.model = model
     
     # Load model state dict
     if cfg.resume:
       model.load_state_dict(ckpt['state_dict'])
       self.micro_steps = ckpt['step'] * cfg.grad_accumulation_steps
 
-    # Move model to device and to DDP
-    self.model = model.to(device)
-    if torch.distributed.is_initialized():
-      self.model = DDP(self.model, device_ids=[local_rank])
+    # Different from DDP, we should apply fully_shard on submodules as well as the root model
+    print(f"Applying FSDP fully_shard to the model...")
+    fsdp_kwargs = {
+      "mp_policy": MixedPrecisionPolicy(param_dtype=torch.bfloat16, reduce_dtype=torch.float32)
+    }
+    for layer in self.model.layers:
+      fully_shard(layer, **fsdp_kwargs)
+    fully_shard(self.model, **fsdp_kwargs)
+    
+    # Shard-awarte intialization
+    self.model.to_empty(device=self.device)
+    self.model.reset_parameters()
 
     # Compile
     if cfg.torch_compile:
       print(f"Compiling the model...")
       self.model = torch.compile(self.model)
-
-    # AMP
-    device_type = 'cuda' if 'cuda' in device else 'cpu'
-    ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torch.float16}[self.dtype]
-    self.ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(device_type=device_type, dtype=ptdtype)
 
     # Grad scaler if training in fp16, if enabled=False, scaler is a no-op
     self.scaler = torch.amp.GradScaler(enabled=(self.dtype == 'float16'))
@@ -90,7 +96,7 @@ class TorchEngine(torch.nn.Module):
     self.criterion = CrossEntropyLoss()
 
     # Optimizer
-    param_groups = get_param_groups(model, cfg.weight_decay)
+    param_groups = get_param_groups(self.model, cfg.weight_decay)
     self.optimizer = intialize_optimizer(param_groups, cfg)
     self.scheduler = initialize_scheduler(self.optimizer, cfg)
 
@@ -98,7 +104,15 @@ class TorchEngine(torch.nn.Module):
       self.optimizer.load_state_dict(ckpt['optimizer'])
       self.scheduler.load_state_dict(ckpt['scheduler'])
       self.scaler.load_state_dict(ckpt['scaler'])
-
+  
+    # Print memory consumption
+    torch.cuda.reset_peak_memory_stats(self.device)
+    rank = dist.get_rank() if dist.is_initialized() else 0
+    cur = torch.cuda.memory_allocated(self.device) / 1e6
+    res = torch.cuda.memory_reserved(self.device) / 1e6
+    peak = torch.cuda.max_memory_allocated(self.device) / 1e6
+    print(f"[rank{rank}] alloc={cur:.0f}MB res={res:.0f}MB peak={peak:.0f}MB", flush=True)
+    
 
   def step(self, batch):
     """Wraps a fwd pass, bwd pass, and optimization step."""
@@ -115,12 +129,11 @@ class TorchEngine(torch.nn.Module):
       self.model.require_backward_grad_sync = \
         (self.accumulated_samples == self.accumulation_steps)
 
-    # forward pass with autocasting
-    with self.ctx:
-      output = self.model(inputs, attn_mask)
-      logits = getattr(output, 'logits', output)
-      loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
-      loss = loss / self.accumulation_steps
+    # forward pass
+    output = self.model(inputs, attn_mask)
+    logits = getattr(output, 'logits', output)
+    loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
+    loss = loss / self.accumulation_steps
 
     # detach for logging (scale up to undo the division above)
     loss_val = loss.detach() * self.accumulation_steps
@@ -163,10 +176,9 @@ class TorchEngine(torch.nn.Module):
     num_batches = 0
     for batch in dataloader:
       inputs, targets, attn_mask = _move_to_device(batch, self.seq_len, self.device, self.intra_doc_masking)
-      with self.ctx:
-        output = self.model(inputs, attn_mask)
-        logits = getattr(output, 'logits', output)
-        loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
+      output = self.model(inputs, attn_mask)
+      logits = getattr(output, 'logits', output)
+      loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
     
       if torch.isnan(loss) or loss is None:
         raise ValueError("Validation loss is nan")

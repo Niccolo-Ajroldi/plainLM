@@ -15,7 +15,7 @@ def construct_model(cfg):
       expand = float(Fraction(cfg.expand)),
       n_layers = cfg.n_layers,
       n_heads = cfg.n_heads,
-      rmsorm_eps = 1e-6,
+      rmsnorm_eps = 1e-6,
       mlp = cfg.mlp_class,
       seq_len = cfg.seq_len,
       tie_embeddings = cfg.tie_embeddings
@@ -37,6 +37,7 @@ def construct_model(cfg):
     n_params_no_embed = model.count_params(non_embedding=True)
     print(f"Number of parameters: {n_params:_}")
     print(f"Number of non-embedding parameters: {n_params_no_embed:_}")
+    print(f"Model size: ≈ {n_params * 4 / (1024**2):.1f} MB (fp32)")
     if wandb.run is not None:
       wandb.log({
         "n_params": n_params,

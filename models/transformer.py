@@ -19,7 +19,7 @@ class ModelConfig:
     n_layers: int
     n_heads: int
     mlp: str = 'mlp'
-    rmsorm_eps: float = 1e-6
+    rmsnorm_eps: float = 1e-6
     tie_embeddings: bool = False
 
 
@@ -74,9 +74,9 @@ class Block(nn.Module):
     def __init__(self, layer_id: int, cfg: ModelConfig):
         super().__init__()
         self.attn = Attention(cfg)
-        self.attn_norm = RMSNorm(cfg.dim, cfg.rmsorm_eps)
+        self.attn_norm = RMSNorm(cfg.dim, cfg.rmsnorm_eps)
         self.mlp = MLP_CLASSES[cfg.mlp](dim=cfg.dim, hidden_dim=int(cfg.expand * cfg.dim))
-        self.mlp_norm = RMSNorm(cfg.dim, cfg.rmsorm_eps)
+        self.mlp_norm = RMSNorm(cfg.dim, cfg.rmsnorm_eps)
         self.layer_id = layer_id
     
     def forward(self, x, freqs_cis, attn_mask):
@@ -90,25 +90,25 @@ class Transformer(nn.Module):
         super().__init__()
         self.n_layers = cfg.n_layers
         head_dim = cfg.dim // cfg.n_heads; assert cfg.dim % cfg.n_heads == 0
-        
+
         self.embed_tokens = nn.Embedding(cfg.vocab_size, cfg.dim)
         self.layers = nn.ModuleList([Block(idx, cfg) for idx in range(cfg.n_layers)])
-        self.out_norm = RMSNorm(cfg.dim, cfg.rmsorm_eps)
+        self.out_norm = RMSNorm(cfg.dim, cfg.rmsnorm_eps)
         self.lm_head = nn.Linear(cfg.dim, cfg.vocab_size, bias=False)
-        
-        self.freqs_cis = precompute_freqs_cis(head_dim, cfg.seq_len, 500000)[0:cfg.seq_len]
-        
-        # init all weights, scale residual branches
-        self.apply(self._init_weights)
-        self._scale_residual_branches()
-        
-        if cfg.tie_embeddings:
-            self.tie_weights()
+        self.tie_embeddings = cfg.tie_embeddings
+
+        self.register_buffer(
+          "freqs_cis",
+          precompute_freqs_cis(head_dim, cfg.seq_len, 500000)[0:cfg.seq_len],
+          persistent=False,
+        )
+
+        if not any(p.is_meta for p in self.parameters()):
+          self.reset_parameters()
 
     def forward(self, x, attn_mask):
         # x: (bsz, seqlen)
         x = self.embed_tokens(x) # (bsz, seqlen, dim)
-        self.freqs_cis = self.freqs_cis.to(x.device)
         for layer in self.layers:
             x = layer(x, self.freqs_cis, attn_mask) # (bsz, seqlen, dim)
         return self.lm_head(self.out_norm(x)) # (bsz, seqlen, vocab_size)
@@ -120,6 +120,14 @@ class Transformer(nn.Module):
                 torch.nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
+        elif isinstance(module, RMSNorm):
+            nn.init.ones_(module.weight)
+
+    def reset_parameters(self):
+        self.apply(self._init_weights)
+        self._scale_residual_branches()
+        if self.tie_embeddings:
+            self.tie_weights()
 
     def _scale_residual_branches(self):
         for n, p in self.named_parameters():
@@ -138,4 +146,3 @@ class Transformer(nn.Module):
             if not self.lm_head.weight is self.embed_tokens.weight:  # if no weight tying
                 n_params -= self.lm_head.weight.numel()
         return n_params
-
