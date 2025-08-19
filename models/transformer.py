@@ -19,7 +19,7 @@ class ModelConfig:
     n_layers: int
     n_heads: int
     mlp: str = 'mlp'
-    rmsorm_eps: float = 1e-6
+    rmsnorm_eps: float = 1e-6
     tie_embeddings: bool = False
 
 
