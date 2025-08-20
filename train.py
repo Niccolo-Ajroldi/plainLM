@@ -8,7 +8,8 @@ import utils
 from utils import print_master
 from torch_utils import pytorch_setup, destroy_ddp
 from data import get_dataloaders
-from checkpoint_utils import save_checkpoint, maybe_load_checkpoint
+from checkpoint_utils import save_checkpoint, get_checkpoint_path
+from engine.checkpointer import get_full_model_state_dict, get_full_optimizer_state_dict
 from models import construct_model
 from engine import TorchEngine
 
@@ -32,18 +33,18 @@ def main(_):
     utils.init_wandb(cfg)
     utils.log_job_info(FLAGS)
 
-  # Load checkpoint
-  ckpt = maybe_load_checkpoint(cfg, device)
+  # Checkpoint path
+  ckpt_path = get_checkpoint_path(cfg)
 
   # Dataset
   trainloader, validloader = get_dataloaders(cfg)
 
-  # Model
+  # Model TODO: move inside engine?
   with torch.device("meta"):
     model, _ = construct_model(cfg)
 
   # Engine
-  engine = TorchEngine(model, cfg, device, local_rank, ckpt)
+  engine = TorchEngine(model, cfg, device, ckpt_path)
 
   # If we are just cooling down, we set budget = resume + cooldown
   steps_budget = cfg.steps_budget if cfg.scheduler != "linear_cooldown" else cfg.resume_step + engine.scheduler.cooldown_steps
@@ -52,7 +53,7 @@ def main(_):
     raise ValueError("trainloader too short!")
 
   # Start the dataloader from the correct micro-batch
-  step_start = cfg.resume_step if cfg.resume else 0
+  step_start = engine._step if cfg.resume is not None else 0 # bleah!
   micro_step_start = step_start * cfg.grad_accumulation_steps
   print_master(f"=== Start Training from step: {step_start}/{steps_budget}, micro_step: {micro_step_start}/{micro_step_budget} ===")
 
@@ -82,17 +83,24 @@ def main(_):
       utils.log(cfg, metrics, micro_step, train_loss, train_loss_array, valid_loss, engine.optimizer, world_size)
       train_loss_array = []
 
-    # Checkpoint
-    if master_process and cfg.save_intermediate_checkpoints and step % cfg.save_every_steps == 0 and is_step:
-      save_checkpoint(step, model, engine, cfg, metrics, JOB_IDX)
+    # Checkpoint TODO: replace w/ engine.save() + json dump
+    if cfg.save_intermediate_checkpoints and step % cfg.save_every_steps == 0 and is_step:
+      save(step, engine, cfg, metrics, JOB_IDX, master_process)
 
   # End of training: log and save checkpoint
   print_master(f"=== Training Completed! ===")
-  if master_process and cfg.save_last_checkpoint:
-    save_checkpoint(step, model, engine, cfg, metrics, JOB_IDX)
+  if cfg.save_last_checkpoint:
+    save(step, engine, cfg, metrics, JOB_IDX, master_process)
 
   # DDP slaughtering
   destroy_ddp()
+
+
+def save(step, engine, cfg, metrics, JOB_IDX, master_process):
+  model_state_dict = get_full_model_state_dict(engine.model, cfg.fsdp2)
+  optim_state_dict = get_full_optimizer_state_dict(engine.optimizer, cfg.fsdp2)
+  if master_process:
+    save_checkpoint(step, model_state_dict, optim_state_dict, engine, cfg, metrics, JOB_IDX)
 
 
 if __name__ == "__main__":

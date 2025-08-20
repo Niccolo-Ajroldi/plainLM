@@ -1,16 +1,15 @@
 
 import torch
 
+from torch import nn
 from torch import distributed as dist
 from torch.nn import CrossEntropyLoss
-from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed.fsdp import fully_shard, MixedPrecisionPolicy
-
-from contextlib import nullcontext
 
 from models import get_param_groups
 from optim import intialize_optimizer, initialize_scheduler
 from data.datasets.data_prep_utils import intra_doc_causal_mask
+from .checkpointer import load_model, load_optim
 
 
 def _move_to_device(batch, seq_len, device, intra_doc_masking):
@@ -49,11 +48,10 @@ class TorchEngine(torch.nn.Module):
       model,
       cfg,
       device,
-      local_rank,
-      ckpt,
+      ckpt_path,
       ):
     super().__init__()
-    
+
     self.micro_steps = 0
     self.accumulated_samples = 0
 
@@ -66,27 +64,33 @@ class TorchEngine(torch.nn.Module):
     self.device = device
     self.model = model
     
-    # Load model state dict
-    if cfg.resume:
-      model.load_state_dict(ckpt['state_dict'])
-      self.micro_steps = ckpt['step'] * cfg.grad_accumulation_steps
-
-    # Different from DDP, we should apply fully_shard on submodules as well as the root model
-    print(f"Applying FSDP fully_shard to the model...")
+    # Apply fully_shard on submodules and root model,
+    # converts model.parameters() to DTensor, moves sharded model to device.
+    print(f"Applying FSDP fully_shard.")
     fsdp_kwargs = {
-      "mp_policy": MixedPrecisionPolicy(param_dtype=torch.bfloat16, reduce_dtype=torch.float32)
+      "mp_policy": MixedPrecisionPolicy(
+          param_dtype=torch.bfloat16, 
+          reduce_dtype=torch.float32
+      )
     }
     for layer in self.model.layers:
       fully_shard(layer, **fsdp_kwargs)
     fully_shard(self.model, **fsdp_kwargs)
-    
-    # Shard-awarte intialization
-    self.model.to_empty(device=self.device)
-    self.model.reset_parameters()
+
+    # Initialize model parameters
+    if not cfg.resume:
+      self.model.to_empty(device=self.device)
+      self.model.reset_parameters()
+    else:
+      map_location = self.device if not cfg.fsdp2 else 'cpu'
+      ckpt = torch.load(ckpt_path, map_location=map_location, mmap=True, weights_only=True)
+      self._step = ckpt['step'] # TODO: remove!! only used in train.py
+      self.micro_steps = ckpt['step'] * cfg.grad_accumulation_steps
+      load_model(self.model, ckpt['state_dict'], cfg.fsdp2)
 
     # Compile
     if cfg.torch_compile:
-      print(f"Compiling the model...")
+      print(f"Compiling the model.")
       self.model = torch.compile(self.model)
 
     # Grad scaler if training in fp16, if enabled=False, scaler is a no-op
@@ -101,18 +105,10 @@ class TorchEngine(torch.nn.Module):
     self.scheduler = initialize_scheduler(self.optimizer, cfg)
 
     if cfg.resume:
-      self.optimizer.load_state_dict(ckpt['optimizer'])
+      load_optim(self.optimizer, ckpt['optimizer'], cfg.fsdp2)
       self.scheduler.load_state_dict(ckpt['scheduler'])
       self.scaler.load_state_dict(ckpt['scaler'])
-  
-    # Print memory consumption
-    torch.cuda.reset_peak_memory_stats(self.device)
-    rank = dist.get_rank() if dist.is_initialized() else 0
-    cur = torch.cuda.memory_allocated(self.device) / 1e6
-    res = torch.cuda.memory_reserved(self.device) / 1e6
-    peak = torch.cuda.max_memory_allocated(self.device) / 1e6
-    print(f"[rank{rank}] alloc={cur:.0f}MB res={res:.0f}MB peak={peak:.0f}MB", flush=True)
-    
+
 
   def step(self, batch):
     """Wraps a fwd pass, bwd pass, and optimization step."""

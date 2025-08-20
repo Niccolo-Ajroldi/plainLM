@@ -9,18 +9,17 @@ import utils
 def _latest_checkpoint(ckpt_dir: str, prefix: str = 'checkpoint_') -> str | None:
   """Retrieve the latest checkpoint path in a directory."""
   if not os.path.isdir(ckpt_dir):
-    return None
+    raise ValueError(f"Directory {ckpt_dir} does not exist.")
 
   # List all files matching the prefix pattern
-  checkpoints = [f for f in os.listdir(ckpt_dir) if re.match(rf"^{prefix}\d+$", f)]
-  checkpoints.sort(key=lambda x: int(x[len(prefix):]))  # Sort numerically
+  checkpoints = [f for f in os.listdir(ckpt_dir) if re.match(rf"^{prefix}\d+\.pth$", f)]
+  checkpoints.sort(key=lambda x: int(x[len(prefix):-4])) # Sort numerically
 
   return os.path.join(ckpt_dir, checkpoints[-1]) if checkpoints else None
 
 
-def save_checkpoint(step, model, engine, cfg, metrics, job_idx=None):
+def save_checkpoint(step, model_state_dict, optim_state_dict, engine, cfg, metrics, job_idx=None):
 
-  optimizer = engine.optimizer
   scheduler = engine.scheduler
   scaler = engine.scaler
 
@@ -30,8 +29,8 @@ def save_checkpoint(step, model, engine, cfg, metrics, job_idx=None):
 
   state = {
     "step": step,
-    "state_dict": model.state_dict(),
-    "optimizer": optimizer.state_dict() if save_optim else None,
+    "state_dict": model_state_dict,
+    "optimizer": optim_state_dict if save_optim else None,
     "scheduler": scheduler.state_dict() if scheduler and save_scheduler else {},
     "scaler": scaler.state_dict() if save_scaler else None,
   }
@@ -49,29 +48,24 @@ def save_checkpoint(step, model, engine, cfg, metrics, job_idx=None):
     json.dump(dict(metrics), f)
 
 
-def maybe_load_checkpoint(cfg, device):
+def get_checkpoint_path(cfg):
+  if not cfg.resume:
+    return None
+    
+  # resume from a specified exp or from the same exp
+  # notice that we can resume from `resume_exp_name`, but save to a different `exp_name`
+  resume_exp_name = cfg.resume_exp_name if cfg.resume_exp_name is not None else cfg.exp_name
+  ckpt_dir = os.path.join(cfg.out_dir, resume_exp_name)
   
-  ckpt = None
+  # resume from a specified checkpoint or from the latest
+  if cfg.resume_step is not None:
+    ckpt_path = os.path.join(ckpt_dir, f'ckpt_step_{cfg.resume_step}.pth')
+  else:
+    ckpt_path = _latest_checkpoint(ckpt_dir, prefix='ckpt_step_')
   
-  if cfg.resume:
-    
-    # resume from a specified exp or from the same exp
-    # notice that we can resume from `resume_exp_name`, but save to a different `exp_name`
-    resume_exp_name = cfg.resume_exp_name if cfg.resume_exp_name is not None else cfg.exp_name
-    ckpt_dir = os.path.join(cfg.out_dir, resume_exp_name)
-    
-    # resume from a specified checkpoint or from the latest
-    if cfg.resume_step is not None:
-      ckpt_path = os.path.join(ckpt_dir, f'ckpt_step_{cfg.resume_step}.pth')
-    else:
-      ckpt_path = _latest_checkpoint(ckpt_dir, prefix='ckpt_')
-    
-    # load checkpoint
-    print(f"Loading checkpoint from {ckpt_path}")
-    
-    ckpt = torch.load(ckpt_path, map_location=device)
+  print(f"Resuming from checkpoint {ckpt_path}")
 
-  return ckpt
+  return ckpt_path
 
 
 def match_state_dict_keys(state_dict: dict, state_dict_orig: dict) -> dict:
@@ -79,7 +73,10 @@ def match_state_dict_keys(state_dict: dict, state_dict_orig: dict) -> dict:
 
   Takes care of stat_dict discrepancies caused by DDP or torch.compile,
   drop any prefixes from the state_dict, then add the correct prefixes in the correct order.
-
+  
+  TODO: switch to `torch.distributed.checkpoint.state_dict.get_model_state_dict()`
+  and to `torch.distributed.checkpoint.state_dict.get_optimizer_state_dict`
+  
   Args:
       state_dict (dict): dict to modify
       state_dict_orig (dict): dict to match
