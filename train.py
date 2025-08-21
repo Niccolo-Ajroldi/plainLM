@@ -1,5 +1,7 @@
 """Pretrain a Transformer on language modeling."""
 
+# TODO: use prettytable for logging!
+
 from absl import app, flags
 from collections import defaultdict
 

@@ -3,6 +3,9 @@
 source ~/miniforge3/etc/profile.d/conda.sh
 conda activate plainLM
 
+export HOME=/home/najroldi
+export TMPDIR=/fast/najroldi/tmp
+
 # Job specific vars
 config=$1
 job_idx=$2  # CONDOR job array index ranges from 0 to n-1

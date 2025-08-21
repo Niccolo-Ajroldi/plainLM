@@ -1,35 +1,26 @@
 
-# Executable should be a full path
-executable=/home/najroldi/plainLM/cluster/single_gpu/condor.sh
+# Define variables
+executable=/home/najroldi/plainLM/cluster/eval/single_gpu/condor.sh
 
-# Hyperparmeters are specified in a YAML configuration file
-config=config/pythia/baseline_01.yaml
-
-# Queue as many jobs as points in the hyperaparameter grid
+# Job specific vars
+config=config/14M/eval_ewa.yaml
 n_jobs=3
 
-# Pass arguments to the executable
+# Args
 arguments = $(config) $(Process) $(Cluster)
 
 # Logs
-<<<<<<< HEAD
-LOGS_DIR=/fast/najroldi/logs/quant
-=======
 LOGS_DIR=/fast/najroldi/logs/wa_lm
->>>>>>> wa
 error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
 output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
 log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 
-# Job requirements
-<<<<<<< HEAD
-request_memory = 100000
-request_cpus = 8
-=======
-request_memory = 50000
+# Specs
+request_memory = 500000
 request_cpus = 4
->>>>>>> wa
 request_gpus = 1
 requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g125.internal.cluster.is.localnet") && (TARGET.Machine != "g145.internal.cluster.is.localnet")
+# requirements = (TARGET.CUDACapability >= 9.0)
+# requirements =  (TARGET.CUDACapability >= 8.0) && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB")
 
 queue $(n_jobs)

@@ -47,6 +47,8 @@ def get_dataloaders(cfg):
     valid_set = load_from_disk(cfg.validset_path)
     if not isinstance(valid_set, Dataset):
       raise ValueError("'dataset' should be a datasets.Dataset")
+    if valid_set.format.get("type", None) != "torch":  # support AlgoPerf datasets
+      valid_set.set_format(type="torch")
 
     if getattr(cfg, 'valid_tokens', False):  # subsample validatiion set
       valid_rows = cfg.valid_tokens // (cfg.seq_len + 1)

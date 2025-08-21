@@ -1,0 +1,25 @@
+
+# Define variables
+LOGS_DIR=/fast/najroldi/logs/wa_lm
+executable=/home/najroldi/plainLM/cluster/eval/multi_gpu/condor.sh
+
+# Job specific vars
+config=config/eval/160M_10B_01.yaml
+n_jobs=1
+
+# Args
+arguments = $(config) $(Process) $(Cluster)
+
+# Logs
+error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Specs
+request_memory = 1000000
+request_cpus = 16
+request_gpus = 4
+requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g145.internal.cluster.is.localnet") && (TARGET.Machine != "g154.internal.cluster.is.localnet")
+# requirements =  (TARGET.CUDACapability >= 8.0) && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB")
+
+queue $(n_jobs)
