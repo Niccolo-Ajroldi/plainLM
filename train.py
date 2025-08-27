@@ -20,16 +20,16 @@ FLAGS = flags.FLAGS
 def main(_):
 
   CFG_PATH, JOB_IDX = FLAGS.config, FLAGS.job_idx
-  cfg, _ = utils.load_config(CFG_PATH, JOB_IDX)
+  cfg, _ = utils.load_config(CFG_PATH)
 
   local_rank, world_size, device, master_process = pytorch_setup(cfg)
 
   if master_process:
-    utils.maybe_make_dir(cfg, JOB_IDX)
+    utils.maybe_make_dir(cfg)
 
   if cfg.use_wandb and master_process:
     utils.init_wandb(cfg)
-    utils.log_job_info(FLAGS)
+    utils.log_job_info()
 
   # Load checkpoint
   ckpt = maybe_load_checkpoint(cfg, device)
@@ -82,12 +82,12 @@ def main(_):
 
     # Checkpoint
     if master_process and cfg.save_intermediate_checkpoints and step % cfg.save_every_steps == 0 and is_step:
-      save_checkpoint(step, model, engine, cfg, metrics, JOB_IDX)
+      save_checkpoint(step, model, engine, cfg, metrics)
 
   # End of training: log and save checkpoint
   print_master(f"=== Training Completed! ===")
   if master_process and cfg.save_last_checkpoint:
-    save_checkpoint(step, model, engine, cfg, metrics, JOB_IDX)
+    save_checkpoint(step, model, engine, cfg, metrics)
 
   # DDP slaughtering
   destroy_ddp()

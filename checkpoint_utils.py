@@ -17,7 +17,7 @@ def _latest_checkpoint(ckpt_dir: str, prefix: str = 'checkpoint_') -> str | None
 
   return os.path.join(ckpt_dir, checkpoints[-1]) if checkpoints else None
 
-def save_checkpoint(step, model, engine, cfg, metrics, job_idx=None):
+def save_checkpoint(step, model, engine, cfg, metrics):
 
   optimizer = engine.optimizer
   scheduler = engine.scheduler
@@ -43,7 +43,7 @@ def save_checkpoint(step, model, engine, cfg, metrics, job_idx=None):
     "scaler": scaler.state_dict() if save_scaler else None,
   }
 
-  exp_dir = utils.get_exp_dir_path(cfg, job_idx)
+  exp_dir = utils.get_exp_dir_path(cfg)
 
   # Save ckpt
   save_path = os.path.join(exp_dir, f'ckpt_step_{step}.pth')
@@ -61,12 +61,13 @@ def maybe_load_checkpoint(cfg, device):
   ckpt = None
   
   if cfg.resume:
-    
     # resume from a specified exp or from the same exp
-    # notice that we can resume from `resume_exp_name`, but save to a different `exp_name`
-    resume_exp_name = cfg.resume_exp_name if cfg.resume_exp_name is not None else cfg.exp_name
-    ckpt_dir = os.path.join(cfg.out_dir, resume_exp_name)
-    
+    # notice that we can resume from `resume_exp_name`, but save to a different `exp_name`    
+    if cfg.resume_exp_name:
+      ckpt_dir = os.path.join(cfg.out_dir, cfg.exp_name)
+    else: # verbatim as it was saved
+      ckpt_dir = utils.get_exp_dir_path(cfg)
+      
     # resume from a specified checkpoint or from the latest
     if cfg.resume_step is not None:
       ckpt_path = os.path.join(ckpt_dir, f'ckpt_step_{cfg.resume_step}.pth')

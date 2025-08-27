@@ -9,8 +9,12 @@ import torch
 from itertools import product
 from collections import namedtuple
 
+from absl import flags
 
-def load_config(path, job_idx=None):
+FLAGS = flags.FLAGS
+job_idx = FLAGS.job_idx
+
+def load_config(path):
   """
   Parse a yaml file and return the correspondent config as a namedtuple.
   If the config files has multiple entries, returns the one corresponding to job_idx.
@@ -56,7 +60,7 @@ def init_wandb(cfg):
   )
 
 
-def log_job_info(FLAGS):
+def log_job_info():
   """Logs info about cluster job."""
   if FLAGS.job_cluster is not None and FLAGS.job_idx is not None:
     print(f'JOB_CLUSER = {FLAGS.job_cluster}')
@@ -109,7 +113,7 @@ def _matching_wandb_run_exists(cfg):
     return False
 
 
-def get_exp_dir_path(cfg, job_idx=None):
+def get_exp_dir_path(cfg):
   """Build a exp_dir path from config. It supports job arrays."""
   exp_dir = os.path.join(cfg.out_dir, cfg.exp_name)
   if job_idx is not None:  # subfolder for each job in the sweep
@@ -117,14 +121,14 @@ def get_exp_dir_path(cfg, job_idx=None):
   return exp_dir
 
 
-def maybe_make_dir(cfg, job_idx=None):
+def maybe_make_dir(cfg):
   """Creates an experiment directory if checkpointing is enabled"""
   if not cfg.save_intermediate_checkpoints and not cfg.save_last_checkpoint:
     return
   if cfg.resume and cfg.resume_exp_name is None:  # if resuming from the same exp
     return
 
-  exp_dir = get_exp_dir_path(cfg, job_idx)
+  exp_dir = get_exp_dir_path(cfg)
 
   if os.path.exists(exp_dir):
     if not cfg.over_write:
