@@ -12,13 +12,11 @@ def _latest_checkpoint(ckpt_dir: str, prefix: str = 'checkpoint_') -> str | None
     return None
 
   # List all files matching the prefix pattern
-  checkpoints = [f for f in os.listdir(ckpt_dir) if re.match(rf"^{prefix}\d+$", f)]
-  checkpoints.sort(key=lambda x: int(x[len(prefix):]))  # Sort numerically
-
+  checkpoints = [f for f in os.listdir(ckpt_dir) if re.match(rf"^{prefix}(\d+)\.pth$", f)]
+  checkpoints.sort(key=lambda x: int(x[len(prefix):][:-4]))  # Sort numerically #:-4 to circumvent pth
   return os.path.join(ckpt_dir, checkpoints[-1]) if checkpoints else None
 
 def save_checkpoint(step, model, engine, cfg, metrics):
-
   optimizer = engine.optimizer
   scheduler = engine.scheduler
   scaler = engine.scaler
@@ -57,7 +55,7 @@ def save_checkpoint(step, model, engine, cfg, metrics):
 
 
 def maybe_load_checkpoint(cfg, device):
-  
+  """Each job_idx will restore where it left of."""
   ckpt = None
   
   if cfg.resume:
@@ -67,12 +65,12 @@ def maybe_load_checkpoint(cfg, device):
       ckpt_dir = os.path.join(cfg.out_dir, cfg.exp_name)
     else: # verbatim as it was saved
       ckpt_dir = utils.get_exp_dir_path(cfg)
-      
+    
     # resume from a specified checkpoint or from the latest
     if cfg.resume_step is not None:
       ckpt_path = os.path.join(ckpt_dir, f'ckpt_step_{cfg.resume_step}.pth')
     else:
-      ckpt_path = _latest_checkpoint(ckpt_dir, prefix='ckpt_')
+      ckpt_path = _latest_checkpoint(ckpt_dir, prefix='ckpt_step_')
     
     # load checkpoint
     print(f"Loading checkpoint from {ckpt_path}")

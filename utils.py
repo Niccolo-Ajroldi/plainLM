@@ -12,8 +12,6 @@ from collections import namedtuple
 from absl import flags
 
 FLAGS = flags.FLAGS
-job_idx = FLAGS.job_idx
-
 def load_config(path):
   """
   Parse a yaml file and return the correspondent config as a namedtuple.
@@ -24,7 +22,7 @@ def load_config(path):
     config_dict = yaml.safe_load(file)
   Config = namedtuple('Config', config_dict.keys())
 
-  if job_idx is None:
+  if FLAGS.job_idx is None:
     cfg = config_dict
     sweep_size = 1
 
@@ -34,10 +32,10 @@ def load_config(path):
     combinations = list(product(*values))
 
     sweep_size = len(combinations)
-    if job_idx >= sweep_size:
+    if FLAGS.job_idx >= sweep_size:
       raise ValueError("job_idx exceeds the total number of hyperparam combinations.")
 
-    combination = combinations[job_idx]
+    combination = combinations[FLAGS.job_idx]
     cfg = {keys[i]: combination[i] for i in range(len(keys))}
   
   return Config(**cfg), sweep_size
@@ -116,8 +114,8 @@ def _matching_wandb_run_exists(cfg):
 def get_exp_dir_path(cfg):
   """Build a exp_dir path from config. It supports job arrays."""
   exp_dir = os.path.join(cfg.out_dir, cfg.exp_name)
-  if job_idx is not None:  # subfolder for each job in the sweep
-    exp_dir = os.path.join(exp_dir, f"job_idx_{job_idx}")
+  if FLAGS.job_idx is not None:  # subfolder for each job in the sweep
+    exp_dir = os.path.join(exp_dir, f"job_idx_{FLAGS.job_idx}")
   return exp_dir
 
 
