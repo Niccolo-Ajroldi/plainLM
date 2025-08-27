@@ -1,0 +1,27 @@
+# Executable should be a full path
+executable=/home/atatjer/src/plainLM/cluster/multi_gpu/condor2.sh
+
+# Hyperparmeters are specified in a YAML configuration file
+config=/home/atatjer/src/plainLM/config/pythia1BT/twice_size.yaml
+
+# Queue as many jobs as points in the hyperaparameter grid
+n_jobs=3
+
+# Pass arguments to the executable
+arguments = $(config) $(Process) $(Cluster)
+
+# Logs 
+LOGS_DIR=/fast/atatjer/scalinglawsquantization/logs
+error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Job requirements
+request_memory = 200000
+request_cpus = 4 
+request_gpus = 2 
+# requirements = (TARGET.CUDACapability == 9.0)
+# requirements =  (TARGET.CUDACapability >= 8.0) && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB") && (TARGET.Machine !=  'i101.internal.cluster.is.localnet')
+requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
+
+queue $(n_jobs)
