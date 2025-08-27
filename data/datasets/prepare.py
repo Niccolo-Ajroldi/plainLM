@@ -227,6 +227,7 @@ def main(_):
         # it truncates leftover tokens that don't fill a full max_seq_length chunk.
         print("Concatenating and chunking in s of max_seq_length")
         max_seq_length = FLAGS.seq_length + 1
+        print(f"Concatenating and chunking in sequances of length {max_seq_length}.")
         chunked_ds = tokenized_ds.map(
             partial(concat_chunck, max_seq_length=max_seq_length),
             **map_setup

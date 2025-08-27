@@ -12,8 +12,9 @@ def _latest_checkpoint(ckpt_dir: str, prefix: str = 'checkpoint_') -> str | None
     return None
 
   # List all files matching the prefix pattern
-  checkpoints = [f for f in os.listdir(ckpt_dir) if re.match(rf"^{prefix}(\d+)\.pth$", f)]
-  checkpoints.sort(key=lambda x: int(x[len(prefix):][:-4]))  # Sort numerically #:-4 to circumvent pth
+  checkpoints = [f for f in os.listdir(ckpt_dir) if re.match(rf"^{prefix}\d+\.pth$", f)]
+  checkpoints.sort(key=lambda x: int(x[len(prefix):-4])) # Sort numerically
+
   return os.path.join(ckpt_dir, checkpoints[-1]) if checkpoints else None
 
 def save_checkpoint(step, model, engine, cfg, metrics):

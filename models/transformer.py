@@ -19,7 +19,7 @@ class ModelConfig:
     n_layers: int
     n_heads: int
     mlp: str = 'mlp'
-    rmsorm_eps: float = 1e-6
+    rmsnorm_eps: float = 1e-6
     tie_embeddings: bool = False
 
 
@@ -55,13 +55,7 @@ class Attention(nn.Module):
         v = v.transpose(1, 2) # (bsz, nh, seqlen, h_dim)
         
         if attn_mask is not None:
-          # attn_mask has shape (bsz, seqlen, seqlen)
-          # from (bsz, L, L) to (bsz, 1, L, L) so it broadcasts over heads
-          # import pdb
-          # pdb.set_trace()
-          attn_mask = attn_mask.unsqueeze(1)
-          # pdb.set_trace()
-
+          attn_mask = attn_mask.unsqueeze(1) # broadcast over heads: (bsz, seqlen, seqlen) -> (bsz, 1, seqlen, seqlen)
           out = F.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask) # (bsz, nh, seqlen, h_dim)
         else:
           out = F.scaled_dot_product_attention(q, k, v, is_causal=True) # (bsz, nh, seqlen, h_dim)
@@ -74,9 +68,9 @@ class Block(nn.Module):
     def __init__(self, layer_id: int, cfg: ModelConfig):
         super().__init__()
         self.attn = Attention(cfg)
-        self.attn_norm = RMSNorm(cfg.dim, cfg.rmsorm_eps)
+        self.attn_norm = RMSNorm(cfg.dim, cfg.rmsnorm_eps)
         self.mlp = MLP_CLASSES[cfg.mlp](dim=cfg.dim, hidden_dim=int(cfg.expand * cfg.dim))
-        self.mlp_norm = RMSNorm(cfg.dim, cfg.rmsorm_eps)
+        self.mlp_norm = RMSNorm(cfg.dim, cfg.rmsnorm_eps)
         self.layer_id = layer_id
     
     def forward(self, x, freqs_cis, attn_mask):
