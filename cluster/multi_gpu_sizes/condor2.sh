@@ -1,6 +1,6 @@
 #!/bin/bash
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-source /home/atatjer/src/_plainLM/.venv/bin/activate
+source /home/atatjer/src/plainLM/.venv/bin/activate
 
 # Job specific vars
 config=$1

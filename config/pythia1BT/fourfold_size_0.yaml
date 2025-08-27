@@ -64,7 +64,7 @@ out_dir: '/fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_10BT/'
 over_write: False 
 
 resume: True 
-resume_step: null
+resume_step: 1600
 resume_exp_name: null
 
 save_last_checkpoint: True

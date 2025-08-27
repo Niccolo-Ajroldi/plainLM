@@ -1,5 +1,5 @@
 # Executable should be a full path
-executable=/home/atatjer/src/_plainLM/cluster/multi_gpu/condor2.sh
+executable=/home/atatjer/src/plainLM/cluster/multi_gpu/condor2.sh
 
 # Hyperparmeters are specified in a YAML configuration file
 config=/home/atatjer/src/_plainLM/config/pythia1BT/fourfold_size.yaml
