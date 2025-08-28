@@ -86,7 +86,11 @@ This project was inspired by:
 
 Huge thanks to these projects for their contributions to open-source language model pretraining!
 
-## Some projects using `plainLM`
-- Orvieto, A., & Gower, R. (2025). In search of Adam’s secret sauce https://arxiv.org/abs/2505.21829
-- Ajroldi, N., Orvieto, A., & Geiping, J. (2025). When, where and why to average weights? https://arxiv.org/abs/2502.06761
-- Srećković, T., Geiping, J., & Orvieto, A. (2025). Is your batch size the problem? Revisiting the Adam-SGD gap in language modeling https://arxiv.org/abs/2506.12543
+## Published projects using `plainLM`
+Projects Using plainLM (with conferences)
+
+
+- Orvieto, A., & Gower, R. (2025). In search of Adam’s secret sauce [ArXiv](https://arxiv.org/abs/2505.21829).
+- Ajroldi, N., Orvieto, A., & Geiping, J. (2025). When, where and why to average weights? In Proceedings of [ICML 2025](https://icml.cc/virtual/2025/poster/45698).
+- Srećković, T., Geiping, J., & Orvieto, A. (2025). Is your batch size the problem? Revisiting the Adam-SGD gap in language modeling. [ArXiv](https://arxiv.org/abs/2506.12543).
+- Belloni, A., Noci, L., & Orvieto, A. (2025). Universal Dynamics of Warmup Stable Decay: Understanding WSD Beyond Transformers. [MOSS Workshop, ICML 2025].(https://icml.cc/virtual/2025/47679)
