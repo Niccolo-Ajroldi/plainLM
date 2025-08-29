@@ -49,7 +49,7 @@ def save_checkpoint(step, model, engine, cfg, metrics, job_idx=None):
     json.dump(dict(metrics), f)
 
 
-def maybe_load_checkpoint(cfg, device):
+def maybe_load_checkpoint(cfg):
   
   ckpt = None
   
@@ -66,10 +66,10 @@ def maybe_load_checkpoint(cfg, device):
     else:
       ckpt_path = _latest_checkpoint(ckpt_dir, prefix='ckpt_')
     
-    # load checkpoint
+    # load checkpoint on cpu to later avoid OOM when intializing the model on device
+    # (an alternative design would be to initialize the model on `meta` device instead)
     print(f"Loading checkpoint from {ckpt_path}")
-    
-    ckpt = torch.load(ckpt_path, map_location=device)
+    ckpt = torch.load(ckpt_path, map_location='cpu')
 
   return ckpt
 
