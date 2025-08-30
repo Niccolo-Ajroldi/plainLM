@@ -9,6 +9,7 @@ trainset_path: "/fast/najroldi/data/lm/fineweb/fw_20B_tokens_ctx1024/train"
 vocab_size: 50257
 seq_len: 1024
 num_workers: 4
+intra_doc_masking: False
 
 sampler: 'stateful_random'
 sampler_seed: 1996
@@ -27,7 +28,7 @@ tie_embeddings: True
 torch_compile: True
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps)
-steps_budget: 10
+steps_budget: 50
 
 # note 1: this is micro batch size if grad_accumulation_steps>1
 # note 2: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
@@ -48,7 +49,7 @@ grad_clip: 1.0
 eps: 1.e-20
 
 scheduler: 'warmup_cosine'
-warmup_steps: 700
+warmup_steps: 0
 cooldown_steps: null
 lr_start: 1.e-10
 lr_end: null
@@ -65,7 +66,7 @@ wandb_run_name: 'test_stateful_random_DDP_02'
 exp_name: 'test_stateful_random_DDP_02'
 
 resume: True
-resume_step: 4
+resume_step: 12
 resume_exp_name: 'test_stateful_random_DDP_01'
 
 # resume: False

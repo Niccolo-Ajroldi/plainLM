@@ -86,7 +86,7 @@ class AvgEngine(torch.nn.Module):
     total_loss = 0.0
     num_batches = 0
     for batch in dataloader:
-      inputs, targets = _move_to_device(batch, self.seq_len, self.device)
+      inputs, targets, _ = _move_to_device(batch, self.seq_len, self.device)
       with self.ctx:
         output = self.model(inputs)
         logits = getattr(output, 'logits', output)

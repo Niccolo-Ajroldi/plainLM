@@ -60,7 +60,7 @@ def pytorch_setup(cfg):
 
 def destroy_ddp():
   if torch.distributed.is_initialized():
-    torch.cuda.synchronize()  # finish GPU work
+    # torch.cuda.synchronize()  # finish GPU work
     torch.distributed.barrier()  # wait for all ranks
     destroy_process_group()  # cleanly tear down comms
 

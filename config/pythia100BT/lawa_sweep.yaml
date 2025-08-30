@@ -1,17 +1,17 @@
 
-## => run with this bsz=128 on 1GPU
+## => run with this bsz=56 on 1GPU
 
 # avg
-eval_ckpt_folder: "/fast/atatjer/scalinglawsquantization/checkpoints/nld_baseline_01/job_idx_0"
+eval_ckpt_folder: "/fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_100BT_baseline_01/job_idx_0"
 avg_start_step: 0
-avg_every_steps: 20
+avg_every_steps: [500, 1000, 1500, 2000, 5000, 10000] # 6x
 avg_scheme: "LAWA"
-lawa_queue_len: 5
+lawa_queue_len: [5, 10, 20, 50, 100] # 5x
 
 deterministic: False
 seed: 1996
 
-trainset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_10BT/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train" # tokens: 9_849_288_704
+trainset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_100BT/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train"
 vocab_size: 50277
 seq_len: 2048
 intra_doc_masking: False
@@ -20,9 +20,9 @@ sampler_seed: 1996
 num_workers: 4
 
 eval: True
-validset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_10BT/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
-valid_tokens: 1000000
-eval_every_steps: 100
+validset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_100BT/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
+valid_tokens: 1000000  # 1M
+eval_every_steps: 1000
 
 model: 'pythia-160m'
 torch_compile: True
@@ -32,7 +32,7 @@ cuda_matmul_allow_tf32: True
 cudnn_allow_tf32: True
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps)
-steps_budget: 18500
+steps_budget: 190000 # 99_614_720_000 tokens
 
 # note 1: this is micro batch size if grad_accumulation_steps>1
 # note 2: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
@@ -62,24 +62,20 @@ lr_end_pct: null
 log_every_steps: null
 print_progress: null
 
-use_wandb: False
+use_wandb: True
 wandb_watch: False
 check_existing_wandb_run: False
-wandb_project: 'wa_lm_2'
+wandb_project: 'quant'
 wandb_dir: '/fast/najroldi/logs/quant/wandb'
-wandb_run_name: 'nld_lawa_01'
-exp_name: 'nld_lawa_01'
+wandb_run_name: 'p100BT_lawa_01'
+exp_name: 'p100BT_lawa_01'
+out_dir: '/fast/atatjer/scalinglawsquantization/checkpoints'
+over_write: True
 
 resume: null
 resume_step: null
 resume_exp_name: null
 
-out_dir: '/fast/atatjer/scalinglawsquantization/checkpoints'
-save_last_checkpoint: False
+save_last_checkpoint: True
 save_intermediate_checkpoints: True
-save_every_steps: 100
-save_optim: False
-save_scheduler: False
-save_scaler: False
-
-over_write: True
+save_every_steps: 2000
