@@ -1,12 +1,11 @@
 # Executable should be a full path
-executable=/home/atatjer/src/plainLM/cluster/multi_gpu/condor4.sh
+executable=/home/atatjer/src/plainLM/cluster/multi_gpu_sizes/condor4.sh
 
 # Hyperparmeters are specified in a YAML configuration file
-# config=/home/atatjer/src/plainLM/config/pythia10BT_replica/replicate_01.yaml
-config=/home/atatjer/src/plainLM/config/pythia10BT/baseline_01.yaml
+config=/home/atatjer/src/plainLM/config/pythia10BT/baseline_01_rerun.yaml
 
 # Queue as many jobs as points in the hyperaparameter grid
-n_jobs=3
+n_jobs=1
 
 # Pass arguments to the executable
 arguments = $(config) $(Process) $(Cluster)
@@ -22,7 +21,7 @@ request_memory = 500000
 request_cpus = 16 
 request_gpus = 4 
 # requirements = (TARGET.CUDACapability == 9.0)
-# requirements =  (TARGET.CUDACapability >= 8.0) && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB")
- requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
+requirements =  (TARGET.CUDACapability >= 8.0) && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB")
+# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
 
 queue $(n_jobs)

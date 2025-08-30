@@ -61,7 +61,7 @@ class TorchEngine(torch.nn.Module):
 
     self.device = device
     self.model = model
-    
+
     # Load model state dict
     if cfg.resume:
       model.load_state_dict(ckpt['state_dict'])

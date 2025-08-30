@@ -39,7 +39,7 @@ dtype: 'bfloat16'
 
 optim: 'adamw'
 fused_optim: True
-lr: [3.e-3, 1.e-3, 1.e-2]
+lr: 1.e-3
 weight_decay: 0.1
 beta1: 0.9
 beta2: 0.95
@@ -58,8 +58,8 @@ print_progress: True
 use_wandb: True
 wandb_project: 'quantization_pretraining'
 wandb_dir: '/fast/atatjer/wandb/quantization_pretraining/'
-wandb_run_name: 'twice'
-exp_name: 'twice'
+wandb_run_name: 'twice_bias_WD'
+exp_name: 'twice_biasWD'
 out_dir: '/fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_10BT/'
 over_write: True
 

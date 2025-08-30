@@ -63,7 +63,7 @@ def maybe_load_checkpoint(cfg, device):
     # resume from a specified exp or from the same exp
     # notice that we can resume from `resume_exp_name`, but save to a different `exp_name`    
     if cfg.resume_exp_name:
-      ckpt_dir = os.path.join(cfg.out_dir, cfg.exp_name)
+      ckpt_dir = os.path.join(cfg.out_dir, cfg.resume_exp_name)
     else: # verbatim as it was saved
       ckpt_dir = utils.get_exp_dir_path(cfg)
     
@@ -77,7 +77,6 @@ def maybe_load_checkpoint(cfg, device):
     print(f"Loading checkpoint from {ckpt_path}")
     
     ckpt = torch.load(ckpt_path, map_location=device)
-
   return ckpt # this should probably return the resume_step for this logic to work
 
 

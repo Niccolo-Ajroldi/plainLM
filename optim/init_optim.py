@@ -2,7 +2,6 @@
 
 from .lr_schedule import WarmupCosine, WarmupLinearDecay, WSD, WarmupConstant, LinearCooldown
 
-
 def intialize_optimizer(model, cfg):
   """
   Intialize an optimizer.

@@ -12,6 +12,7 @@ from collections import namedtuple
 from absl import flags
 
 FLAGS = flags.FLAGS
+
 def load_config(path):
   """
   Parse a yaml file and return the correspondent config as a namedtuple.

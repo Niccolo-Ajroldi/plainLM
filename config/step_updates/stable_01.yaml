@@ -30,20 +30,20 @@ steps_budget: 190000 # 99_614_720_000 tokens
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
 micro_batch_size: 32
-grad_accumulation_steps: 1
+grad_accumulation_steps: 4
 
 # note: choose between {float32, float16, bfloat16}
 # note: float16 data type will automatically use a GradScaler
 dtype: 'bfloat16'
 
-optim: 'adamw'
+optim: 'custom_adam'
 fused_optim: True
-lr: [1.e-3, 3.e-4]
+lr: 3.e-3
 weight_decay: 0.1
 beta1: 0.9
 beta2: 0.95
 grad_clip: 1.0
-corrected_weight_decay: True
+corrected_weight_decay: False
 log_grad_norms: False
 
 scheduler: ['wsd']
@@ -53,7 +53,7 @@ lr_start: 0.0
 lr_end: 0.0
 lr_end_pct: null
 
-log_every_steps: 500
+log_every_steps: 1
 print_progress: True
 
 use_wandb: True
@@ -70,5 +70,6 @@ resume_exp_name: null
 
 save_last_checkpoint: True
 save_intermediate_checkpoints: True
-save_every_steps: 2000 # save the model every X steps
+save_every_steps: 1 # save the model every X steps
 save_optim_every_steps: 2000 # save optimizer every Y steps
+save_step_update_every_steps: 1 # save optimizer every Y steps

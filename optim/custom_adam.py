@@ -71,7 +71,7 @@ class CustomAdam(torch.optim.Optimizer):
 
         # (Corrected) Weight Decay
         wd_scale = lr if max_lr is None else lr ** 2 / max_lr
-        p.mul_(1. - wd_scale * weight_decay)
+        p.mul_(1. - wd_scale * weight_decay) 
 
         # m,v initialization
         if 'm' not in p_state:
@@ -94,8 +94,11 @@ class CustomAdam(torch.optim.Optimizer):
         denom = (v.sqrt() / bias_correction2_sqrt).add_(eps)
         p.addcdiv_(m, denom, value=-lr/bias_correction1)
         
-        # Store per-step update on CPU
-        p_state["u"] = (m / (denom * bias_correction1)).detach().to("cpu", non_blocking=True)
+        # Store per-step update on CPU: adam term + weight decay term
+        # Many extra ops, but works because this should only happen for 500 steps.
+        adam_update = (m / (denom * bias_correction1)).detach().to("cpu", non_blocking=True)
+        wd_update = (p * (weight_decay)).detach().to("cpu", non_blocking=True)
+        p_state["u"] = adam_update + wd_update # no netgative sign btw!
         p_state['lr'] = lr
 
 

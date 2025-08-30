@@ -5,7 +5,7 @@ executable=/home/atatjer/src/plainLM/cluster/multi_gpu_sizes/condor2.sh
 config=/home/atatjer/src/plainLM/config/pythia1BT/twice_size.yaml
 
 # Queue as many jobs as points in the hyperaparameter grid
-n_jobs=3
+n_jobs=1
 
 # Pass arguments to the executable
 arguments = $(config) $(Process) $(Cluster)

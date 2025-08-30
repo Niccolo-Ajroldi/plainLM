@@ -31,7 +31,7 @@ steps_budget: 83000
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
 micro_batch_size: 32
-grad_accumulation_steps: 2
+grad_accumulation_steps: 1
 
 # note: choose between {float32, float16, bfloat16}
 # note: float16 data type will automatically use a GradScaler
@@ -58,13 +58,13 @@ print_progress: True
 use_wandb: True
 wandb_project: 'quantization_pretraining'
 wandb_dir: '/fast/atatjer/wandb/quantization_pretraining/'
-wandb_run_name: 'half'
-exp_name: 'half'
+wandb_run_name: 'half_3rdrun'
+exp_name: 'half_3rdrun'
 out_dir: '/fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_10BT/'
 over_write: True
 
-resume: True
-resume_step: 34000
+resume: False
+resume_step: null
 resume_exp_name: null
 
 save_last_checkpoint: True

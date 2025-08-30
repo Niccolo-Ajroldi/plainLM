@@ -31,7 +31,7 @@ steps_budget: 2000
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
 micro_batch_size: 16
-grad_accumulation_steps: 8 
+grad_accumulation_steps: 4
 
 # note: choose between {float32, float16, bfloat16}
 # note: float16 data type will automatically use a GradScaler
@@ -39,7 +39,7 @@ dtype: 'bfloat16'
 
 optim: 'adamw'
 fused_optim: True
-lr: [3.e-3, 1.e-3, 1.e-2]
+lr: 1.e-3
 weight_decay: 0.1
 beta1: 0.9
 beta2: 0.95
@@ -58,8 +58,8 @@ print_progress: True
 use_wandb: True
 wandb_project: 'quantization_pretraining'
 wandb_dir: '/fast/atatjer/wandb/quantization_pretraining/'
-wandb_run_name: 'fourfold'
-exp_name: 'fourfold'
+wandb_run_name: 'fourfold_biasWD'
+exp_name: 'fourfold_biasWD'
 out_dir: '/fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_10BT/'
 over_write: True
 
