@@ -21,8 +21,8 @@ def intialize_optimizer(model, cfg):
     )
 
   elif cfg.optim == 'custom_adam':
-    from .custom_adam import CustomAdam, get_param_groups_custom_adam
-    param_groups = get_param_groups_custom_adam(model, cfg)
+    from .custom_adam import CustomAdam
+    param_groups = get_param_groups_default(model, cfg)
     optimizer = CustomAdam(
       param_groups,
       lr=cfg.lr,
@@ -183,8 +183,6 @@ def initialize_scheduler(optimizer, cfg):
     raise NotImplementedError(f"Not implemented scheduler: {cfg.scheduler}.")
   
   return scheduler
-
-
 def get_param_groups_default(model, cfg):
   """
     Create param groups for a Transformer model.

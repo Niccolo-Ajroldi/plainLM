@@ -6,7 +6,7 @@ seed: 100
 
 trainset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_100BT/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train"
 vocab_size: 50277
-seq_len: 2048
+seq_len: 1024
 intra_doc_masking: False
 sampler: 'stateful_random'
 sampler_seed: 1996
@@ -17,7 +17,7 @@ validset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_100BT/tokenized_Eleuth
 valid_tokens: 1000000  # 1M
 eval_every_steps: 1000
 
-model: 'pythia-160m'
+model: 'pythia-70m'
 torch_compile: True
 
 # Allow TF32 matmul and cudnn
@@ -25,53 +25,48 @@ cuda_matmul_allow_tf32: True
 cudnn_allow_tf32: True
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
-# steps_budget: 190000 # 99_614_720_000 tokens
-steps_budget: 152500 # Do only 500 steps for science
+steps_budget: null
 
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
-micro_batch_size:  8
-grad_accumulation_steps: 16
+micro_batch_size: 64
+grad_accumulation_steps: 1
 
 # note: choose between {float32, float16, bfloat16}
 # note: float16 data type will automatically use a GradScaler
 dtype: 'bfloat16'
 
-optim: 'custom_adam'
-  # optim: 'adamw'
+optim: 'adamw'
 fused_optim: True
 lr: 1.e-3
 weight_decay: 0.1
 beta1: 0.9
 beta2: 0.95
 grad_clip: 1.0
-corrected_weight_decay: False
-log_grad_norms: False
 
-scheduler: ['wsd']
-warmup_steps: 0.01
-cooldown_steps: 0 # no cooldown this experiment studies the ste update during the stable phase
+scheduler: 'linear_cooldown'
+warmup_steps: null
+cooldown_steps: 10000
 lr_start: 0.0
 lr_end: 0.0
 lr_end_pct: null
 
-log_every_steps: 5 
+log_every_steps: 100
 print_progress: True
 
 use_wandb: True
 wandb_project: 'quantization_pretraining'
 wandb_dir: '/fast/atatjer/wandb/quantization_pretraining/'
-wandb_run_name: 'step_updates_500steps_stable_01'
-exp_name: 'step_updates_500steps_stable_01'
+wandb_run_name: 'kumar_30M_wsd_03_cooldown_00'
+exp_name: 'kumar_30M_wsd_03_cooldown_00'
 out_dir: '/fast/atatjer/scalinglawsquantization/checkpoints'
 over_write: True
 
 resume: True
-resume_step: 152000
-resume_exp_name: /fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_100BT_baseline_04/job_idx_1/
+resume_exp_name: 'kumar_30M_wsd_03/job_idx_0'
+resume_step: [1500, 13000, 40000, 89500]
 
 save_last_checkpoint: True
 save_intermediate_checkpoints: True
-save_every_steps: 5 # save the model every X steps
-save_optim_every_steps: 5 # save optimizer every Y steps
-save_step_update_every_steps: 5 # save optimizer every Y steps
+save_every_steps: 500 # save the model every X steps
+save_optim_every_steps: 200000000 # save optimizer every Y steps

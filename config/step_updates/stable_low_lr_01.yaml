@@ -25,50 +25,52 @@ cuda_matmul_allow_tf32: True
 cudnn_allow_tf32: True
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
-steps_budget: 190000 # 99_614_720_000 tokens
+# steps_budget: 190000 # 99_614_720_000 tokens
+steps_budget: 152500 # Do only 500 steps for science
 
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
-micro_batch_size: 32
-grad_accumulation_steps: 1
+micro_batch_size: 8 
+grad_accumulation_steps: 16
 
 # note: choose between {float32, float16, bfloat16}
 # note: float16 data type will automatically use a GradScaler
 dtype: 'bfloat16'
 
-optim: 'adamw'
+optim: 'custom_adam'
 fused_optim: True
-lr: [1.e-3, 3.e-4]
+lr: 5.e-4
 weight_decay: 0.1
 beta1: 0.9
 beta2: 0.95
 grad_clip: 1.0
-corrected_weight_decay: True
+corrected_weight_decay: False
 log_grad_norms: False
 
 scheduler: ['wsd']
 warmup_steps: 0.01
-cooldown_steps: 38000
+cooldown_steps: 0 # no cooldown this experiment studies the ste update during the stable phase
 lr_start: 0.0
-lr_end: 0.0
+lr_end: 5.e-4
 lr_end_pct: null
 
-log_every_steps: 500
+log_every_steps: 1
 print_progress: True
 
 use_wandb: True
 wandb_project: 'quantization_pretraining'
 wandb_dir: '/fast/atatjer/wandb/quantization_pretraining/'
-wandb_run_name: 'pythia_160M_100BT_baseline_04'
-exp_name: 'pythia_160M_100BT_baseline_04'
+wandb_run_name: 'step_updates_500steps_stable_low_lr_01'
+exp_name: 'step_updates_500steps_stable_low_lr_01'
 out_dir: '/fast/atatjer/scalinglawsquantization/checkpoints'
-over_write: False
+over_write: True
 
-resume: False
-resume_step: null
-resume_exp_name: null
+resume: True
+resume_step: 152000
+resume_exp_name: /fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_100BT_baseline_04/job_idx_1/
 
 save_last_checkpoint: True
 save_intermediate_checkpoints: True
-save_every_steps: 2000 # save the model every X steps
+save_every_steps: 1 # save the model every X steps
 save_optim_every_steps: 2000 # save optimizer every Y steps
+save_step_update_every_steps: 1 # save optimizer every Y steps

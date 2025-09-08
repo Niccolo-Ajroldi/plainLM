@@ -12,6 +12,4 @@ export TMPDIR=/fast/atatjer/tmp/${job_cluster}/${job_idx}
 mkdir -p "$TMPDIR"
 
 # Launch torch distributed run on 8 devices
-torchrun \
-  --redirects 1:0,2:0,3:0,4:0,5:0,6:0,7:0 \
-  --standalone --nnodes=1 --nproc_per_node=4  train.py --config=$config --job_idx=$job_idx --job_cluster=$job_cluster
+torchrun --redirects 1:0,2:0,3:0,4:0,5:0,6:0,7:0 --standalone --nnodes=1 --nproc_per_node=4  train.py --config=$config --job_idx=$job_idx --job_cluster=$job_cluster

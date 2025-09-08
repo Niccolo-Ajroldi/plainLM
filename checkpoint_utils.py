@@ -5,7 +5,6 @@ import json
 import torch
 import utils
 
-
 def _latest_checkpoint(ckpt_dir: str, prefix: str = 'checkpoint_') -> str | None:
   """Retrieve the latest checkpoint path in a directory."""
   if not os.path.isdir(ckpt_dir):
@@ -22,17 +21,14 @@ def save_checkpoint(step, model, engine, cfg, metrics):
   scheduler = engine.scheduler
   scaler = engine.scaler
 
-  ## old logic
-  # save_optim = getattr(cfg, 'save_optim', True)
-  # save_scheduler = getattr(cfg, 'save_scheduler', True)
-  # save_scaler = getattr(cfg, 'save_scaler', True)
-
-  ## new logic
   save_optim_every_steps = getattr(cfg, 'save_optim_every_steps', cfg.save_every_steps)
+  save_step_update_every_steps = getattr(cfg, 'save_step_update_every_steps', cfg.save_every_steps) # best if flag for each
+
   is_time_to_save_optim = (step % save_optim_every_steps == 0)
   save_optim = is_time_to_save_optim
   save_scheduler = is_time_to_save_optim
   save_scaler = is_time_to_save_optim
+  save_step_update = (step % save_step_update_every_steps == 0)
   
   state = {
     "step": step,
@@ -40,6 +36,7 @@ def save_checkpoint(step, model, engine, cfg, metrics):
     "optimizer": optimizer.state_dict() if save_optim else None,
     "scheduler": scheduler.state_dict() if scheduler and save_scheduler else {},
     "scaler": scaler.state_dict() if save_scaler else None,
+    "step_update": optimizer.state.get('step_update', None) if save_step_update else None,
   }
 
   exp_dir = utils.get_exp_dir_path(cfg)
@@ -75,7 +72,6 @@ def maybe_load_checkpoint(cfg, device):
     
     # load checkpoint
     print(f"Loading checkpoint from {ckpt_path}")
-    
     ckpt = torch.load(ckpt_path, map_location=device)
   return ckpt # this should probably return the resume_step for this logic to work
 

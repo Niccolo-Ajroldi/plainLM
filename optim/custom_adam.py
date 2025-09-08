@@ -54,12 +54,11 @@ class CustomAdam(torch.optim.Optimizer):
     step_t = self.state["tot_steps"]
 
     for group in self.param_groups:
-
       lr = group['lr']
       beta1, beta2 = group['betas']
       weight_decay = group['weight_decay']
       eps = group['eps']
-      max_lr = self.defaults['lr'] if group['corrected_weight_decay'] else None
+      max_lr = self.defaults['lr'] if group.get('corrected_weight_decay', False) else None
 
       for p in group['params']:
         if p.grad is None:
@@ -71,7 +70,7 @@ class CustomAdam(torch.optim.Optimizer):
 
         # (Corrected) Weight Decay
         wd_scale = lr if max_lr is None else lr ** 2 / max_lr
-        p.mul_(1. - wd_scale * weight_decay) 
+        p.mul_(1. - wd_scale * weight_decay)
 
         # m,v initialization
         if 'm' not in p_state:
@@ -94,60 +93,15 @@ class CustomAdam(torch.optim.Optimizer):
         denom = (v.sqrt() / bias_correction2_sqrt).add_(eps)
         p.addcdiv_(m, denom, value=-lr/bias_correction1)
         
-        # Store per-step update on CPU: adam term + weight decay term
-        # Many extra ops, but works because this should only happen for 500 steps.
-        adam_update = (m / (denom * bias_correction1)).detach().to("cpu", non_blocking=True)
-        wd_update = (p * (weight_decay)).detach().to("cpu", non_blocking=True)
-        p_state["u"] = adam_update + wd_update # no netgative sign btw!
+        # Store per-step update on CPU
+        p_state["u"] = (m / (denom * bias_correction1)).detach().to("cpu", non_blocking=True)
         p_state['lr'] = lr
 
-
-def get_param_groups_custom_adam(model, cfg):
-  """
-    Create param groups for a Transformer with AdamC optimizer
-    - bias and normalization layers are excluded from weight decay
-    - linear layers (excluding the lm head) are marked with `corrected_weight_decay=True`
-  """
-
-  # filter out parameters that do not require grad
-  named_param_dict = {n: p for n,p in model.named_parameters() if p.requires_grad}
-  param_names = named_param_dict.keys()
-
-  # normaliz
-  norm_param_names = [n for n in param_names if "norm" in n]
-  norm_params = [p for n, p in named_param_dict.items() if n in norm_param_names]
-
-  # bias
-  bias_param_names = [n for n in param_names if "bias" in n and n not in norm_param_names]
-  bias_params = [p for n, p in named_param_dict.items() if n in bias_param_names]
-
-  # embedding
-  embed_param_names = [n for n in param_names if "embed_tokens" in n]
-  embed_params = [p for n, p in named_param_dict.items() if n in embed_param_names]
-
-  # lm head
-  lm_head_param_names = [n for n in param_names if "lm_head" in n]
-  lm_head_params = [p for n, p in named_param_dict.items() if n in lm_head_param_names]
-
-  # all the ohers should be 2D tensors
-  non_matrix_param_names = bias_param_names + norm_param_names + embed_param_names + lm_head_param_names
-  matrix_param_names = [n for n in param_names if n not in non_matrix_param_names]
-  matrix_params = [p for n, p in named_param_dict.items() if n in matrix_param_names]
-
-  # assemble param groups
-  param_groups = [
-    dict(params=bias_params,    weight_decay=0.0,               corrected_weight_decay=False),
-    dict(params=norm_params,    weight_decay=0.0,               corrected_weight_decay=False),
-    dict(params=embed_params,   weight_decay=cfg.weight_decay,  corrected_weight_decay=False),
-    dict(params=lm_head_params, weight_decay=cfg.weight_decay,  corrected_weight_decay=False),
-    dict(params=matrix_params,  weight_decay=cfg.weight_decay,  corrected_weight_decay=cfg.corrected_weight_decay),
-  ]
-
-  # # sanity check
-  # print("bias_param_names:\n\t"     + "\n\t".join(bias_param_names))
-  # print("norm_param_names:\n\t"     + "\n\t".join(norm_param_names))
-  # print("embed_param_names:\n\t"    + "\n\t".join(embed_param_names))
-  # print("lm_head_param_names:\n\t"  + "\n\t".join(lm_head_param_names))
-  # print("matrix_param_names:\n\t"   + "\n\t".join(matrix_param_names))
-
-  return param_groups
+  def load_state_dict(self, state_dict, step=0):
+    """ 
+      Override the default to move state to the correct device.
+      This is necessary when loading a checkpoint on a different device than the one it was saved on.
+    """
+    super().load_state_dict(state_dict)
+    self.state['tot_steps'] = state_dict['state'][0]['step']
+    

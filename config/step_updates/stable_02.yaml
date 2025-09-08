@@ -38,7 +38,6 @@ grad_accumulation_steps: 16
 dtype: 'bfloat16'
 
 optim: 'custom_adam'
-  # optim: 'adamw'
 fused_optim: True
 lr: 1.e-3
 weight_decay: 0.1
@@ -55,14 +54,14 @@ lr_start: 0.0
 lr_end: 0.0
 lr_end_pct: null
 
-log_every_steps: 5 
+log_every_steps: 5
 print_progress: True
 
 use_wandb: True
 wandb_project: 'quantization_pretraining'
 wandb_dir: '/fast/atatjer/wandb/quantization_pretraining/'
-wandb_run_name: 'step_updates_500steps_stable_01'
-exp_name: 'step_updates_500steps_stable_01'
+wandb_run_name: 'step_updates_500steps_stable_02'
+exp_name: 'step_updates_500steps_stable_02'
 out_dir: '/fast/atatjer/scalinglawsquantization/checkpoints'
 over_write: True
 
