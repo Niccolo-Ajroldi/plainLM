@@ -1,5 +1,7 @@
 """Pretrain a Transformer on language modeling."""
 
+# TODO: use prettytable for logging!
+
 from absl import app, flags
 from collections import defaultdict
 
@@ -39,6 +41,7 @@ def main(_):
 
   # Model
   model, _ = construct_model(cfg)
+  print(model)
 
   # Engine
   engine = TorchEngine(model, cfg, device, local_rank, ckpt)

@@ -72,8 +72,10 @@ def maybe_load_checkpoint(cfg, device):
     
     # load checkpoint
     print(f"Loading checkpoint from {ckpt_path}")
-    ckpt = torch.load(ckpt_path, map_location=device)
-  return ckpt # this should probably return the resume_step for this logic to work
+    
+    ckpt = torch.load(ckpt_path, map_location="cpu")
+
+  return ckpt
 
 
 def match_state_dict_keys(state_dict: dict, state_dict_orig: dict) -> dict:

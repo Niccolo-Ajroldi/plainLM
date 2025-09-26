@@ -1,0 +1,80 @@
+
+deterministic: False
+seed: 1996
+
+cuda_matmul_allow_tf32: True
+cudnn_allow_tf32: True
+
+trainset_path: "/fast/najroldi/data/lm/fineweb/fw_20B_tokens_ctx1024/train"
+vocab_size: 50257
+seq_len: 1024
+num_workers: 4
+intra_doc_masking: False
+
+sampler: 'stateful_random'
+sampler_seed: 1996
+
+eval: True
+validset_path: "/fast/najroldi/data/lm/fineweb/fw_20B_tokens_ctx1024/valid"
+eval_every_steps: 24
+
+model: 'transformer'
+d_model: 128
+expand: '8/3'
+n_layers: 6
+n_heads: 4
+mlp_class: 'glu'
+tie_embeddings: True
+torch_compile: True
+
+# note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps)
+steps_budget: 50
+
+# note 1: this is micro batch size if grad_accumulation_steps>1
+# note 2: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
+micro_batch_size: 32
+grad_accumulation_steps: 4
+
+# note: choose between {float32, float16, bfloat16}
+# note: float16 data type will automatically use a GradScaler
+dtype: 'bfloat16'
+
+optim: 'adamw'
+fused_optim: True
+lr: 0.001
+weight_decay: 0.1
+beta1: 0.9
+beta2: 0.95
+grad_clip: 1.0
+eps: 1.e-20
+
+scheduler: 'warmup_cosine'
+warmup_steps: 0
+cooldown_steps: null
+lr_start: 1.e-10
+lr_end: null
+lr_end_pct: 0.001
+
+log_every_steps: 1
+print_progress: True
+
+use_wandb: True
+wandb_watch: False
+wandb_project: 'plainLM_tests'
+wandb_dir: '/fast/najroldi/logs/wa_lm/wandb'
+wandb_run_name: 'test_stateful_random_DDP_02'
+exp_name: 'test_stateful_random_DDP_02'
+
+resume: True
+resume_step: 12
+resume_exp_name: 'test_stateful_random_DDP_01'
+
+# resume: False
+# resume_step: null
+# resume_exp_name: null
+
+out_dir: '/fast/najroldi/exp/llm'
+save_last_checkpoint: True
+save_intermediate_checkpoints: True
+save_every_steps: 1
+over_write: True

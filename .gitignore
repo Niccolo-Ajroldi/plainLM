@@ -30,3 +30,6 @@ Thumbs.db
 # Ignore Weights & Biases (wandb) files
 wandb/
 *.wandb
+
+# Ignore algoperf referecnes
+avg/algoperf/

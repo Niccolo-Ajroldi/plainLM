@@ -10,7 +10,7 @@ from optim import intialize_optimizer, initialize_scheduler
 from data.datasets.data_prep_utils import intra_doc_causal_mask
 
 
-def _move_to_device(batch, seq_len, device, intra_doc_masking):
+def _move_to_device(batch, seq_len, device, intra_doc_masking=False):
   """Slice batch to get inputs and targets, and move them to device."""
   
   inputs = batch['input_ids'][:,:seq_len]

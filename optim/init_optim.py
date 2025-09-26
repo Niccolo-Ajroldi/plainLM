@@ -20,8 +20,21 @@ def intialize_optimizer(model, cfg):
       eps=getattr(cfg, 'eps', 1e-8)
     )
 
+  elif cfg.optim == 'albertw':
+    from .albertw import AlbertW, get_param_groups
+    param_groups = get_param_groups(model, cfg)
+    optimizer = AlbertW(
+      param_groups,
+      lr=cfg.lr,
+      betas=[cfg.beta1, cfg.beta2],
+      weight_decay=cfg.weight_decay,
+      eps=getattr(cfg, 'eps', 1e-8)
+    )
+
   elif cfg.optim == 'custom_adam':
     from .custom_adam import CustomAdam
+    # from .custom_adam import get_param_groups_custom_adam
+    # param_groups = get_param_groups_custom_adam(model, cfg)
     param_groups = get_param_groups_default(model, cfg)
     optimizer = CustomAdam(
       param_groups,
@@ -209,7 +222,7 @@ def get_param_groups_default(model, cfg):
   # assemble param groups
   param_groups = [
     dict(params=norm_params,    weight_decay=0.0,),
-    # dict(params=bias_params,    weight_decay=0.0,),
+    dict(params=bias_params,    weight_decay=0.0,),
     dict(params=other_params,   weight_decay=cfg.weight_decay,),
   ]
 
