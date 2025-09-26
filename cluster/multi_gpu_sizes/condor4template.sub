@@ -13,7 +13,7 @@ log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 
 # Job requirements
 request_memory = 200000
-request_cpus = 16
+request_cpus = 32
 request_gpus = 4 
 # requirements = (TARGET.CUDACapability == 9.0)
 requirements =  (TARGET.CUDACapability >= 8.0) && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB")

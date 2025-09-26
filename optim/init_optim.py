@@ -209,7 +209,7 @@ def get_param_groups_default(model, cfg):
   # assemble param groups
   param_groups = [
     dict(params=norm_params,    weight_decay=0.0,),
-    dict(params=bias_params,    weight_decay=0.0,),
+    # dict(params=bias_params,    weight_decay=0.0,),
     dict(params=other_params,   weight_decay=cfg.weight_decay,),
   ]
 
