@@ -3,33 +3,24 @@
 executable=/home/najroldi/plainLM/cluster/single_gpu/condor.sh
 
 # Hyperparmeters are specified in a YAML configuration file
-config=config/pythia/baseline_01.yaml
+config=config/config.yaml
 
 # Queue as many jobs as points in the hyperaparameter grid
-n_jobs=3
+n_jobs=1
 
 # Pass arguments to the executable
-arguments = $(config) $(Process) $(Cluster)
+arguments = $(config) $(Process)
 
 # Logs
-<<<<<<< HEAD
-LOGS_DIR=/fast/najroldi/logs/quant
-=======
-LOGS_DIR=/fast/najroldi/logs/wa_lm
->>>>>>> wa
+LOGS_DIR=/fast/najroldi/logs/plainLM
 error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
 output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
 log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
 
 # Job requirements
-<<<<<<< HEAD
-request_memory = 100000
-request_cpus = 8
-=======
-request_memory = 50000
-request_cpus = 4
->>>>>>> wa
+request_memory = 250000
+request_cpus = 12
 request_gpus = 1
-requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB") && (TARGET.Machine != "g125.internal.cluster.is.localnet") && (TARGET.Machine != "g145.internal.cluster.is.localnet")
+requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
 
 queue $(n_jobs)

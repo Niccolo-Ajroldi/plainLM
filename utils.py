@@ -18,7 +18,6 @@ def load_config(path):
   Parse a yaml file and return the correspondent config as a namedtuple.
   If the config files has multiple entries, returns the one corresponding to job_idx.
   """
-  
   with open(path, 'r') as file:
     config_dict = yaml.safe_load(file)
   Config = namedtuple('Config', config_dict.keys())
@@ -74,7 +73,6 @@ def _matching_wandb_run_exists(cfg):
     """Check for runs on wandb with the same config. Return True if such run exists."""
 
     api = wandb.Api()
-    runs = api.runs(f"ajnico/{cfg.wandb_project}")
     
     # Extract important flags from configs
     to_match_config = {k: getattr(cfg, k) for k in {

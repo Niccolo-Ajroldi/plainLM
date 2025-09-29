@@ -1,5 +1,6 @@
-## CONFIG file
-## change paths with your own!
+# NOTE: this fits on 8xA100-80GB.
+# If you wish to run on less GPU, make sure to decrease the micro_batch_size
+# and increase the number of accumulation steps.
 
 deterministic: False
 seed: 100
@@ -16,22 +17,22 @@ validset_path: null
 eval_every_steps: null
 
 model: 'transformer'
-d_model: 768
+d_model: 1024
 mlp_class: 'glu'
 expand: '8/3'
-n_layers: 12
-n_heads: 12
+n_layers: 24
+n_heads: 16
 rms_norm: True
 tie_embeddings: False
 torch_compile: True
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
-steps_budget: 4800
+steps_budget: 100
 
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
-micro_batch_size: 32
-grad_accumulation_steps: 8
+micro_batch_size: 8
+grad_accumulation_steps: 4
 
 # note: choose between {float32, float16, bfloat16}
 # note: float16 data type will automatically use a GradScaler

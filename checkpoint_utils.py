@@ -57,12 +57,19 @@ def maybe_load_checkpoint(cfg, device):
   ckpt = None
   
   if cfg.resume:
-    # resume from a specified exp or from the same exp
-    # notice that we can resume from `resume_exp_name`, but save to a different `exp_name`    
-    if cfg.resume_exp_name:
-      ckpt_dir = os.path.join(cfg.out_dir, cfg.resume_exp_name)
-    else: # verbatim as it was saved
-      ckpt_dir = utils.get_exp_dir_path(cfg)
+    # Paths are saved with utils.get_exp_dir_path(cfg), with global flags we can call that again from here
+    # but this will not control the job_idx name.
+    # If cfg.resume_exp_name is given, we will resume from that experiment name
+    # else, this will resume the exact sweep with only one config line!
+    # commented out because maybe it is not straightforward logic with current config design
+    # if cfg.resume_exp_name:
+    #   ckpt_dir = os.path.join(cfg.out_dir, cfg.resume_exp_name)
+    # else: # verbatim as it was saved
+    #   ckpt_dir = utils.get_exp_dir_path(cfg)
+      
+    # notice that we can resume from `resume_exp_name`, but save to a different `exp_name`
+    resume_exp_name = cfg.resume_exp_name if cfg.resume_exp_name is not None else cfg.exp_name
+    ckpt_dir = os.path.join(cfg.out_dir, resume_exp_name) # if `resume_exp_name` is already an absolute path, it will just return `resume_exp_name`
     
     # resume from a specified checkpoint or from the latest
     if cfg.resume_step is not None:
@@ -70,10 +77,10 @@ def maybe_load_checkpoint(cfg, device):
     else:
       ckpt_path = _latest_checkpoint(ckpt_dir, prefix='ckpt_step_')
     
-    # load checkpoint
+    # load checkpoint on cpu to later avoid OOM when intializing the model on device
+    # (an alternative design would be to initialize the model on `meta` device instead)
     print(f"Loading checkpoint from {ckpt_path}")
-    
-    ckpt = torch.load(ckpt_path, map_location="cpu")
+    ckpt = torch.load(ckpt_path, map_location='cpu')
 
   return ckpt
 

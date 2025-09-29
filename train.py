@@ -1,7 +1,5 @@
 """Pretrain a Transformer on language modeling."""
 
-# TODO: use prettytable for logging!
-
 from absl import app, flags
 from collections import defaultdict
 
@@ -41,7 +39,6 @@ def main(_):
 
   # Model
   model, _ = construct_model(cfg)
-  print(model)
 
   # Engine
   engine = TorchEngine(model, cfg, device, local_rank, ckpt)
@@ -69,7 +66,7 @@ def main(_):
       break
 
     # Train
-    train_loss, grad_norms = engine.step(micro_batch)
+    train_loss = engine.step(micro_batch)
     train_loss_array.append(train_loss)
 
     # Eval
@@ -80,7 +77,7 @@ def main(_):
 
     # Log
     if master_process and step % cfg.log_every_steps == 0 and is_step:
-      utils.log(cfg, metrics, micro_step, train_loss, train_loss_array, valid_loss, engine.optimizer, world_size, grad_norms)
+      utils.log(cfg, metrics, micro_step, train_loss, train_loss_array, valid_loss, engine.optimizer, world_size)
       train_loss_array = []
 
     # Checkpoint
