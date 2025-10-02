@@ -67,7 +67,7 @@ wandb_dir: '/fast/atatjer/wandb/quantization_pretraining/'
 wandb_run_name: 'pythia_160M_100BT_cosine_02'
 exp_name: 'pythia_160M_100BT_cosine_02'
 out_dir: '/fast/atatjer/scalinglawsquantization/checkpoints'
-over_write: False
+over_write: True 
 
 resume: False
 resume_step: null
