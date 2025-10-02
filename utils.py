@@ -9,8 +9,11 @@ import torch
 from itertools import product
 from collections import namedtuple
 
+from absl import flags
 
-def load_config(path, job_idx=None):
+FLAGS = flags.FLAGS
+
+def load_config(path):
   """
   Parse a yaml file and return the correspondent config as a namedtuple.
   If the config files has multiple entries, returns the one corresponding to job_idx.
@@ -20,7 +23,7 @@ def load_config(path, job_idx=None):
     config_dict = yaml.safe_load(file)
   Config = namedtuple('Config', config_dict.keys())
 
-  if job_idx is None:
+  if FLAGS.job_idx is None:
     cfg = config_dict
     sweep_size = 1
 
@@ -30,10 +33,10 @@ def load_config(path, job_idx=None):
     combinations = list(product(*values))
 
     sweep_size = len(combinations)
-    if job_idx >= sweep_size:
+    if FLAGS.job_idx >= sweep_size:
       raise ValueError("job_idx exceeds the total number of hyperparam combinations.")
 
-    combination = combinations[job_idx]
+    combination = combinations[FLAGS.job_idx]
     cfg = {keys[i]: combination[i] for i in range(len(keys))}
   
   return Config(**cfg), sweep_size
@@ -56,7 +59,7 @@ def init_wandb(cfg):
   )
 
 
-def log_job_info(FLAGS):
+def log_job_info():
   """Logs info about cluster job."""
   if FLAGS.job_cluster is not None and FLAGS.job_idx is not None:
     print(f'JOB_CLUSER = {FLAGS.job_cluster}')
@@ -71,6 +74,7 @@ def _matching_wandb_run_exists(cfg):
     """Check for runs on wandb with the same config. Return True if such run exists."""
 
     api = wandb.Api()
+    runs = api.runs(f"ajnico/{cfg.wandb_project}")
     
     # Extract important flags from configs
     to_match_config = {k: getattr(cfg, k) for k in {
@@ -108,22 +112,22 @@ def _matching_wandb_run_exists(cfg):
     return False
 
 
-def get_exp_dir_path(cfg, job_idx=None):
+def get_exp_dir_path(cfg):
   """Build a exp_dir path from config. It supports job arrays."""
   exp_dir = os.path.join(cfg.out_dir, cfg.exp_name)
-  if job_idx is not None:  # subfolder for each job in the sweep
-    exp_dir = os.path.join(exp_dir, f"job_idx_{job_idx}")
+  if FLAGS.job_idx is not None:  # subfolder for each job in the sweep
+    exp_dir = os.path.join(exp_dir, f"job_idx_{FLAGS.job_idx}")
   return exp_dir
 
 
-def maybe_make_dir(cfg, job_idx=None):
+def maybe_make_dir(cfg):
   """Creates an experiment directory if checkpointing is enabled"""
   if not cfg.save_intermediate_checkpoints and not cfg.save_last_checkpoint:
     return
   if cfg.resume and cfg.resume_exp_name is None:  # if resuming from the same exp
     return
 
-  exp_dir = get_exp_dir_path(cfg, job_idx)
+  exp_dir = get_exp_dir_path(cfg)
 
   if os.path.exists(exp_dir):
     if not cfg.over_write:
@@ -137,7 +141,7 @@ def maybe_make_dir(cfg, job_idx=None):
     yaml.dump(cfg._asdict(), file, default_flow_style=False)
 
 
-def log(cfg, metrics, micro_step, train_loss, train_loss_array, valid_loss, optimizer, world_size):
+def log(cfg, metrics, micro_step, train_loss, train_loss_array, valid_loss, optimizer, world_size, grad_norms=None):
   """Update metrics, print to console, log on wandb."""
 
   if isinstance(train_loss_array, list):
@@ -155,6 +159,11 @@ def log(cfg, metrics, micro_step, train_loss, train_loss_array, valid_loss, opti
     f"train/ppl": math.exp(train_loss),
     f"train/ppl_avg": math.exp(train_loss_avg),
   }
+
+  if grad_norms is not None:
+    new_metrics["grad_norm/l1"] = grad_norms.get('l1_norm', float("NaN"))
+    new_metrics["grad_norm/l2"] = grad_norms.get('l2_norm', float("NaN"))
+    
   if valid_loss is not None:
     new_metrics["valid/loss"] = valid_loss
     new_metrics["valid/ppl"] = math.exp(valid_loss)
