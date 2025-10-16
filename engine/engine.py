@@ -83,7 +83,7 @@ class TorchEngine(torch.nn.Module):
     self.micro_steps += 1
     self.accumulated_samples += 1
 
-    inputs, targets = _move_to_device(batch, self.seq_len, self.device, self.intra_doc_masking)
+    inputs, targets = _move_to_device(batch, self.seq_len, self.device)
 
     # sync (reduce) gradients at the last accumulation step
     if torch.distributed.is_initialized():
@@ -135,7 +135,7 @@ class TorchEngine(torch.nn.Module):
     total_loss = 0.0
     num_batches = 0
     for batch in dataloader:
-      inputs, targets = _move_to_device(batch, self.seq_len, self.device, self.intra_doc_masking)
+      inputs, targets = _move_to_device(batch, self.seq_len, self.device)
       with self.ctx:
         output = self.model(inputs)
         logits = getattr(output, "logits", output)

@@ -5,7 +5,7 @@
 deterministic: False
 seed: 1996
 
-trainset_path: "$DATA_FWEDU_100BT_NEOX/train"
+trainset_path: "/home/hk-project-p0023364/hgf_omt7140/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train"
 vocab_size: 50277
 seq_len: 2048
 sampler: 'stateful_random'
@@ -13,16 +13,16 @@ sampler_seed: 1996
 num_workers: 4
 
 eval: True
-validset_path: "$DATA_FWEDU_100BT_NEOX/valid"
+validset_path: "/home/hk-project-p0023364/hgf_omt7140/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
 valid_tokens: 1000000  # 1M
 eval_every_steps: 100
 
 model: 'transformer'
-d_model: 768
+d_model: 512
 mlp_class: 'glu'
 expand: '8/3'
-n_layers: 12
-n_heads: 12
+n_layers: 6
+n_heads: 8
 rms_norm: True
 tie_embeddings: False
 torch_compile: True
@@ -43,6 +43,7 @@ grad_accumulation_steps: 1
 # note: float16 data type will automatically use a GradScaler
 dtype: 'bfloat16'
 
+lr: null # placeholeder, will be set by nos_train.py
 weight_decay: 0.1
 beta1: 0.9
 beta2: 0.95
@@ -55,8 +56,8 @@ lr_start: 0.0
 lr_end: 0.0
 lr_end_pct: null
 
-log_every_steps: 1
-print_progress: True
+log_every_steps: 1 # testing
+print_progress: True # testing
 
 use_wandb: False
 wandb_project: null

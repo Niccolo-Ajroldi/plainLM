@@ -84,7 +84,7 @@ class Transformer(nn.Module):
 
     self.embed_tokens = nn.Embedding(cfg.vocab_size, cfg.dim)
     self.layers = nn.ModuleList([Block(idx, cfg) for idx in range(cfg.n_layers)])
-    self.out_norm = RMSNorm(cfg.dim, cfg.rmsorm_eps)
+    self.out_norm = RMSNorm(cfg.dim, cfg.rmsnorm_eps)
     self.lm_head = nn.Linear(cfg.dim, cfg.vocab_size, bias=False)
 
     self.freqs_cis = precompute_freqs_cis(head_dim, cfg.seq_len, 500000)[0 : cfg.seq_len]

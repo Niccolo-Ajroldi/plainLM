@@ -25,7 +25,7 @@ from torch_utils import destroy_ddp, pytorch_setup
 from utils import print_master
 
 # Default config path for a 70M transformer model, TODO: pass it as arg?
-CFG_PATH = "configs/transformer_70M.yaml"
+CFG_PATH = "config/opt_search/70M_10BT.yaml"
 
 
 def train(
@@ -61,7 +61,7 @@ def train(
     utils.init_wandb(cfg)
 
   # Load checkpoint
-  ckpt = maybe_load_checkpoint(cfg, device)
+  ckpt = maybe_load_checkpoint(cfg)
 
   # Dataset
   trainloader, validloader = get_dataloaders(cfg)
@@ -73,8 +73,14 @@ def train(
   engine = TorchEngine(model, cfg, device, local_rank, ckpt)
 
   # Optimizer is usually defined by engine, we define it here for ease of use with NOS
-  param_groups = get_param_groups(model, cfg.weight_decay)
-  engine.optimizer = optimizer_cls(param_groups, cfg)
+  param_groups = get_param_groups(model, cfg)
+  engine.optimizer = optimizer_cls(
+    param_groups, 
+    lr=cfg.lr, 
+    weight_decay=cfg.weight_decay, 
+    betas=(cfg.beta1, cfg.beta2),
+    eps=getattr(cfg, "eps", 1e-8)
+  )
   engine.scheduler = initialize_scheduler(engine.optimizer, cfg)
 
   # If we are just cooling down, we set budget = resume + cooldown
@@ -111,12 +117,7 @@ def train(
       utils.log(cfg, metrics)
 
     # Checkpoint
-    if (
-      master_process
-      and cfg.save_intermediate_checkpoints
-      and step % cfg.save_every_steps == 0
-      and is_step
-    ):
+    if master_process and cfg.save_intermediate_checkpoints and step % cfg.save_every_steps == 0 and is_step:
       save_checkpoint(step, model, engine, cfg, metrics)
 
   # End of training: log and save checkpoint
