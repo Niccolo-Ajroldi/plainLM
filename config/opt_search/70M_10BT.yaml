@@ -36,7 +36,7 @@ steps_budget: 20000 # assuming bsz=256: tot 10_485_760_000 tokens (~10B)
 
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
-micro_batch_size: 32
+micro_batch_size: 24
 grad_accumulation_steps: 1
 
 # note: choose between {float32, float16, bfloat16}
