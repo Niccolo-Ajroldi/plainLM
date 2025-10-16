@@ -1,0 +1,15 @@
+[tool.ruff]
+indent-width = 2
+line-length = 100
+
+[tool.ruff.lint]
+extend-select = [
+    "BLE",      # disallow catch-all exceptions
+    "COM",      # enforce trailing comma rules
+    "F",        # Pyflakes rules
+    "FA",       # Enforce from __future__ import annotations
+    "I",        # Isort rules
+    "ICN",      # Use common import conventions
+    "PLE",      # Pylint Errors
+    "TID",      # Some good import practices
+]

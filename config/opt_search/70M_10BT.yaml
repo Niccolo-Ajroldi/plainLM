@@ -1,0 +1,76 @@
+##
+## Config file to train a 124M-parameter transformer on 10B tokens.
+##
+
+deterministic: False
+seed: 1996
+
+trainset_path: "$DATA_FWEDU_100BT_NEOX/train"
+vocab_size: 50277
+seq_len: 2048
+sampler: 'stateful_random'
+sampler_seed: 1996
+num_workers: 4
+
+eval: True
+validset_path: "$DATA_FWEDU_100BT_NEOX/valid"
+valid_tokens: 1000000  # 1M
+eval_every_steps: 100
+
+model: 'transformer'
+d_model: 768
+mlp_class: 'glu'
+expand: '8/3'
+n_layers: 12
+n_heads: 12
+rms_norm: True
+tie_embeddings: False
+torch_compile: True
+
+# Allow TF32 matmul for speedups on Ampere+ GPUs
+cuda_matmul_allow_tf32: True
+cudnn_allow_tf32: True
+
+# note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
+steps_budget: 20000 # assuming bsz=256: tot 10_485_760_000 tokens (~10B)
+
+# note: this is micro batch size if grad_accumulation_steps>1
+# note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
+micro_batch_size: 32
+grad_accumulation_steps: 1
+
+# note: choose between {float32, float16, bfloat16}
+# note: float16 data type will automatically use a GradScaler
+dtype: 'bfloat16'
+
+weight_decay: 0.1
+beta1: 0.9
+beta2: 0.95
+grad_clip: 1.0
+
+scheduler: 'wsd'
+warmup_steps: 0.05 # 5%
+cooldown_steps: 0.2 # 20%
+lr_start: 0.0
+lr_end: 0.0
+lr_end_pct: null
+
+log_every_steps: 1
+print_progress: True
+
+use_wandb: False
+wandb_project: null
+wandb_dir: null
+wandb_run_name: null
+
+exp_name: 'nld_baseline_01'
+out_dir: '/fast/atatjer/scalinglawsquantization/checkpoints'
+over_write: True
+
+resume: False
+resume_step: null
+resume_exp_name: null
+
+save_last_checkpoint: False
+save_intermediate_checkpoints: False
+save_every_steps: null

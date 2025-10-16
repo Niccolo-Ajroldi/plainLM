@@ -3,12 +3,15 @@
 # This script will download and preprocess FineWebEdu-100BT.
 # Expect some token loss by batched concat_chunk.
 
-mkdir -p /fast/najroldi/tmp
+
+mkdir -p "~/tmp"
 cd ~/plainLM
+source .venv/bin/activate
+
 
 PYTHONPATH=. python data/datasets/prepare.py \
-  --out_path="/fast/najroldi/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX" \
-  --cache_path="/fast/najroldi/tmp" \
+  --out_path="~/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX" \
+  --cache_path="~/tmp" \
   --download --tokenize --chunk \
   --save_tokenized --save_tokenizer \
   --dataset_path="HuggingFaceFW/fineweb-edu" \

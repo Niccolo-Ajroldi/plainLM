@@ -1,19 +1,21 @@
-
 import torch
-
 from datasets import Dataset, load_from_disk
 from torch import distributed as dist
+from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
-from torch.utils.data import DataLoader, SequentialSampler, RandomSampler
 
-from data.datasamplers import StatefulSequentialSampler, StatefulRandomSampler, StatefulDistributedSampler
+from data.datasamplers import (
+  StatefulDistributedSampler,
+  StatefulRandomSampler,
+  StatefulSequentialSampler,
+)
 
 
 def get_dataloaders(cfg):
   """Load trainset and perhaps validset. Returns correspondent DataLoaders."""
-  
+
   train_set = load_from_disk(cfg.trainset_path)
-  if not isinstance(train_set , Dataset):
+  if not isinstance(train_set, Dataset):
     raise ValueError("dataset should be a datasets.Dataset")
 
   train_sampler = _get_sampler(train_set, cfg)
@@ -22,7 +24,7 @@ def get_dataloaders(cfg):
   def collate_fn(batch):
     return {
       "input_ids": torch.stack([x["input_ids"] for x in batch], dim=0),
-      "docs_lengths": [x["docs_lengths"].tolist() for x in batch]
+      "docs_lengths": [x["docs_lengths"].tolist() for x in batch],
     }
 
   trainloader = DataLoader(
@@ -33,7 +35,7 @@ def get_dataloaders(cfg):
     pin_memory=True,
     prefetch_factor=2 if cfg.num_workers > 0 else None,
     persistent_workers=True if cfg.num_workers > 0 else False,
-    collate_fn=collate_fn if 'docs_lengths' in train_set.column_names else None
+    collate_fn=collate_fn if "docs_lengths" in train_set.column_names else None,
   )
 
   if not cfg.validset_path:
@@ -43,7 +45,7 @@ def get_dataloaders(cfg):
     if not isinstance(valid_set, Dataset):
       raise ValueError("'dataset' should be a datasets.Dataset")
 
-    if getattr(cfg, 'valid_tokens', False):  # subsample validatiion set
+    if getattr(cfg, "valid_tokens", False):  # subsample validatiion set
       valid_rows = cfg.valid_tokens // (cfg.seq_len + 1)
       valid_set = valid_set.take(valid_rows)
 
@@ -62,9 +64,9 @@ def get_dataloaders(cfg):
       pin_memory=True,
       prefetch_factor=2 if cfg.num_workers > 0 else None,
       persistent_workers=False,
-      collate_fn=collate_fn if 'docs_lengths' in train_set.column_names else None
+      collate_fn=collate_fn if "docs_lengths" in train_set.column_names else None,
     )
-  
+
   return trainloader, validloader
 
 
@@ -83,7 +85,10 @@ def _get_sampler(train_set, cfg):
     if ddp:
       sampler = DistributedSampler(train_set, shuffle=True, seed=cfg.sampler_seed, drop_last=True)
     else:
-      sampler = RandomSampler(train_set, generator=torch.Generator().manual_seed(cfg.sampler_seed) if cfg.sampler_seed else None)
+      sampler = RandomSampler(
+        train_set,
+        generator=torch.Generator().manual_seed(cfg.sampler_seed) if cfg.sampler_seed else None,
+      )
 
   elif cfg.sampler == "sequential":
     if ddp:
@@ -96,11 +101,18 @@ def _get_sampler(train_set, cfg):
     if ddp:
       # TODO: allow support for drop_last=True!
       sampler = StatefulDistributedSampler(
-        train_set, batch_size=cfg.micro_batch_size, seed=cfg.sampler_seed, start_iter=micro_step_start
+        train_set,
+        batch_size=cfg.micro_batch_size,
+        seed=cfg.sampler_seed,
+        start_iter=micro_step_start,
       )
     else:
       sampler = StatefulRandomSampler(
-        train_set, batch_size=cfg.micro_batch_size, shuffle=True, seed=cfg.sampler_seed, start_idx=micro_step_start
+        train_set,
+        batch_size=cfg.micro_batch_size,
+        shuffle=True,
+        seed=cfg.sampler_seed,
+        start_idx=micro_step_start,
       )
 
   elif cfg.sampler == "stateful_sequential":
@@ -108,10 +120,11 @@ def _get_sampler(train_set, cfg):
     if ddp:
       raise NotImplementedError("StatefulDistributedSampler currently needs a seed.")
     else:
-      sampler = StatefulSequentialSampler(train_set, batch_size=cfg.micro_batch_size, start_idx=micro_step_start)
+      sampler = StatefulSequentialSampler(
+        train_set, batch_size=cfg.micro_batch_size, start_idx=micro_step_start,
+      )
 
   else:
     raise NotImplementedError(f"Sampler {cfg.sampler} is not implemented.")
 
   return sampler
-  

@@ -1,6 +1,5 @@
 absl-py==2.1.0
 datasets==3.5.0
-numpy==1.26.4
 PyYAML==6.0.2
 torch==2.6.0
 transformers==4.44.2
