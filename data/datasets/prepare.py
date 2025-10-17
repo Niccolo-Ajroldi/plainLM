@@ -65,9 +65,9 @@ from transformers import AutoTokenizer
 
 from data.datasets.data_prep_utils import concat_chunck
 
-# Linux’s default “fork” start method inherits open handles (semaphores/CWD) 
+# Linux’s default “fork” start method inherits open handles (semaphores/CWD)
 # in the pymp-* temp directory, leading to OSError on cleanup.
-# Forcing “spawn” via mp.set_start_method("spawn", force=True) 
+# Forcing “spawn” via mp.set_start_method("spawn", force=True)
 # prevents handle inheritance so the temp-dir can be removed safely.
 mp.set_start_method('spawn', force=True)
 
@@ -102,179 +102,174 @@ FLAGS = flags.FLAGS
 def tokenize_batched(examples, tokenizer):
   bos_token = tokenizer.bos_token
   eos_token = tokenizer.eos_token
-  add_eos = lambda seq: (bos_token + seq + eos_token) if seq else seq
-  add_eos_batched = lambda seqs: [add_eos(seq) for seq in seqs]
+
+  def add_eos(seq):
+    return (bos_token + seq + eos_token) if seq else seq
+
+  def add_eos_batched(seqs):
+    return [add_eos(seq) for seq in seqs]
+
   tokenized_output = tokenizer(
-      add_eos_batched(examples["text"]),
-      add_special_tokens=False,
-      return_special_tokens_mask=False,
-      return_attention_mask=False
+    add_eos_batched(examples['text']),
+    add_special_tokens=False,
+    return_special_tokens_mask=False,
+    return_attention_mask=False,
   )
   return tokenized_output
 
 
 def main(_):
-    raw_ds = None
-    tokenized_ds = None
-    
-    out_path = FLAGS.out_path
-    if not os.path.exists(out_path):
-        os.makedirs(out_path, exist_ok=True)
+  raw_ds = None
+  tokenized_ds = None
 
-    tokenizer_name = FLAGS.tokenizer.replace('/', '_') if FLAGS.tokenizer is not None else None # sanitize name for paths
+  out_path = FLAGS.out_path
+  if not os.path.exists(out_path):
+    os.makedirs(out_path, exist_ok=True)
 
-    map_setup = dict(
-        batched=True,
-        batch_size=1024,
-        num_proc=8
+  tokenizer_name = FLAGS.tokenizer.replace('/', '_') if FLAGS.tokenizer is not None else None  # sanitize name for paths
+
+  map_setup = dict(batched=True, batch_size=1024, num_proc=8)
+
+  # --------------------------------------------------------------------
+  ## Download.
+  if FLAGS.download:
+    time_start = timer()
+
+    raw_ds = load_dataset(
+      FLAGS.dataset_path,
+      split=FLAGS.dataset_split,
+      name=FLAGS.dataset_name,
+      streaming=FLAGS.streaming,
+      cache_dir=FLAGS.cache_path,
+      **(
+        {'columns': FLAGS.dataset_columns} if FLAGS.dataset_columns is not None else {}
+      ),  # NOTE: it works only for Parquet datasets in streaming mode
     )
-    
-    # --------------------------------------------------------------------
-    ## Download.
-    if FLAGS.download:
 
-        time_start = timer()
-        
-        raw_ds = load_dataset(
-            FLAGS.dataset_path,
-            split=FLAGS.dataset_split,
-            name=FLAGS.dataset_name,
-            streaming=FLAGS.streaming,
-            cache_dir=FLAGS.cache_path,
-            **({'columns': FLAGS.dataset_columns} if FLAGS.dataset_columns is not None else {}), # NOTE: it works only for Parquet datasets in streaming mode
-          )
+    if FLAGS.nrows is not None:
+      raw_ds = raw_ds.take(FLAGS.nrows)
 
-        if FLAGS.nrows is not None:
-          raw_ds = raw_ds.take(FLAGS.nrows)
+    if FLAGS.streaming:
+      print('Converting IterableDataset to Dataset.')
 
-        if FLAGS.streaming:
-            print("Converting IterableDataset to Dataset.")
-            def custom_generator(iterable_ds):
-                yield from iterable_ds
-            raw_ds = Dataset.from_generator(
-                partial(custom_generator, raw_ds), 
-                features=raw_ds.features,
-            )
-    
-        if FLAGS.save_raw:
-            if os.path.exists(os.path.join(out_path, 'raw_dataset')):
-                raise FileExistsError("Raw dataset already exists.")
-            print("Saving Raw Dataset")
-            raw_ds.save_to_disk(os.path.join(out_path, 'raw_dataset'))
+      def custom_generator(iterable_ds):
+        yield from iterable_ds
 
-        elapsed = timer() - time_start
-        print(f"Downloading time: {elapsed // 60} min")
+      raw_ds = Dataset.from_generator(
+        partial(custom_generator, raw_ds),
+        features=raw_ds.features,
+      )
 
-    # --------------------------------------------------------------------
-    ## Tokenize.
-    if FLAGS.tokenize:
+    if FLAGS.save_raw:
+      if os.path.exists(os.path.join(out_path, 'raw_dataset')):
+        raise FileExistsError('Raw dataset already exists.')
+      print('Saving Raw Dataset')
+      raw_ds.save_to_disk(os.path.join(out_path, 'raw_dataset'))
 
-        time_start = timer()
+    elapsed = timer() - time_start
+    print(f'Downloading time: {elapsed // 60} min')
 
-        if raw_ds is None:
-            raw_ds = load_from_disk(os.path.join(out_path, 'raw_dataset'),)
-        
-        # Shuffle so that multiproc has shards of similar size
-        raw_ds = raw_ds.shuffle(seed=1996)
+  # --------------------------------------------------------------------
+  ## Tokenize.
+  if FLAGS.tokenize:
+    time_start = timer()
 
-        tokenizer = AutoTokenizer.from_pretrained(FLAGS.tokenizer)
-        print(f"Length of tokenizer = {len(tokenizer)}")
+    if raw_ds is None:
+      raw_ds = load_from_disk(
+        os.path.join(out_path, 'raw_dataset'),
+      )
 
-        # Set an high maximum number of tokens that the tokenizer can handle 
-        # in a single input sequences to prevent truncation during tokenization.
-        tokenizer.model_max_length = 1e30
+    # Shuffle so that multiproc has shards of similar size
+    raw_ds = raw_ds.shuffle(seed=1996)
 
-        print("Tokenizing.")
-        tokenized_ds = raw_ds.map(
-            partial(tokenize_batched, tokenizer=tokenizer), 
-            remove_columns=['text'],
-            **map_setup
-        )
+    tokenizer = AutoTokenizer.from_pretrained(FLAGS.tokenizer)
+    print(f'Length of tokenizer = {len(tokenizer)}')
 
-        # Reset to correct value (superflous, but for clarity)
-        if FLAGS.seq_length is not None:
-            tokenizer.model_max_length = FLAGS.seq_length
+    # Set an high maximum number of tokens that the tokenizer can handle
+    # in a single input sequences to prevent truncation during tokenization.
+    tokenizer.model_max_length = 1e30
 
-        if FLAGS.save_tokenized:
-            if os.path.exists(os.path.join(out_path, f"tokenized_{tokenizer_name}", 'tokenized_dataset')):
-                raise FileExistsError("Tokenized dataset already exists.")
-            print("Saving Tokenized Dataset")
-            tokenized_ds.save_to_disk(os.path.join(out_path, f"tokenized_{tokenizer_name}", 'tokenized_dataset'))
-        
-        if FLAGS.save_tokenizer:
-            if os.path.exists(os.path.join(out_path, f"tokenized_{tokenizer_name}", 'tokenizer')):
-                raise FileExistsError("Tokenizer already exists.")
-            print("Saving Tokenizer")
-            tokenizer.save_pretrained(os.path.join(out_path, f"tokenized_{tokenizer_name}", 'tokenizer'))
+    print('Tokenizing.')
+    tokenized_ds = raw_ds.map(partial(tokenize_batched, tokenizer=tokenizer), remove_columns=['text'], **map_setup)
 
-        elapsed = timer() - time_start
-        print(f"Tokenization time: {elapsed // 60} min")
+    # Reset to correct value (superflous, but for clarity)
+    if FLAGS.seq_length is not None:
+      tokenizer.model_max_length = FLAGS.seq_length
 
-    # --------------------------------------------------------------------
-    ## Chunk.
-    if FLAGS.chunk:
+    if FLAGS.save_tokenized:
+      if os.path.exists(os.path.join(out_path, f'tokenized_{tokenizer_name}', 'tokenized_dataset')):
+        raise FileExistsError('Tokenized dataset already exists.')
+      print('Saving Tokenized Dataset')
+      tokenized_ds.save_to_disk(os.path.join(out_path, f'tokenized_{tokenizer_name}', 'tokenized_dataset'))
 
-        time_start = timer()
+    if FLAGS.save_tokenizer:
+      if os.path.exists(os.path.join(out_path, f'tokenized_{tokenizer_name}', 'tokenizer')):
+        raise FileExistsError('Tokenizer already exists.')
+      print('Saving Tokenizer')
+      tokenizer.save_pretrained(os.path.join(out_path, f'tokenized_{tokenizer_name}', 'tokenizer'))
 
-        if tokenized_ds is None:
-            tokenized_ds = load_from_disk(os.path.join(out_path, f"tokenized_{tokenizer_name}", 'tokenized_dataset'))
+    elapsed = timer() - time_start
+    print(f'Tokenization time: {elapsed // 60} min')
 
-        tokenized_ds = tokenized_ds.remove_columns(
-            [c for c in tokenized_ds.column_names if c != "input_ids"]
-        )
+  # --------------------------------------------------------------------
+  ## Chunk.
+  if FLAGS.chunk:
+    time_start = timer()
 
-        # NOTE: expected token loss by batched concat_chunk, 
-        # it truncates leftover tokens that don't fill a full max_seq_length chunk.
-        max_seq_length = FLAGS.seq_length + 1
-        print(f"Concatenating and chunking in sequances of length {max_seq_length}.")
-        chunked_ds = tokenized_ds.map(
-            partial(concat_chunck, max_seq_length=max_seq_length),
-            **map_setup
-        )
-        print(f"Number of tokens in chunked_ds: {len(chunked_ds) * max_seq_length:_}")
-    
-        # Cast to tensors
-        chunked_ds.set_format("torch")
+    if tokenized_ds is None:
+      tokenized_ds = load_from_disk(os.path.join(out_path, f'tokenized_{tokenizer_name}', 'tokenized_dataset'))
 
-        elapsed = timer() - time_start
-        print(f"Chunkization time: {elapsed // 60} min")
-        
-    # --------------------------------------------------------------------
-    ## Split.
+    tokenized_ds = tokenized_ds.remove_columns([c for c in tokenized_ds.column_names if c != 'input_ids'])
 
-    if not FLAGS.split_train_valid:
-        chunked_ds.save_to_disk(os.path.join(out_path, f"ctx_{FLAGS.seq_length}", FLAGS.dataset_split))
-    
-    else:
-        # NOTE: potential single-document contamination in train-valid split (similar to modded-gpt).
-        # One document might be split across both train and valid splits.
-        # We do not shuffle befre chunking, to avoid mulutple documents contamination.
+    # NOTE: expected token loss by batched concat_chunk,
+    # it truncates leftover tokens that don't fill a full max_seq_length chunk.
+    max_seq_length = FLAGS.seq_length + 1
+    print(f'Concatenating and chunking in sequances of length {max_seq_length}.')
+    chunked_ds = tokenized_ds.map(partial(concat_chunck, max_seq_length=max_seq_length), **map_setup)
+    print(f'Number of tokens in chunked_ds: {len(chunked_ds) * max_seq_length:_}')
 
-        n_chunks_valid = FLAGS.n_tokens_valid // max_seq_length
-        valid_ds = chunked_ds.select(range(n_chunks_valid))
-        train_ds = chunked_ds.select(range(n_chunks_valid, len(chunked_ds)))
+    # Cast to tensors
+    chunked_ds.set_format('torch')
 
-        print(f"Number of tokens in train_ds: {len(train_ds) * max_seq_length:_}")
-        print(f"Number of tokens in valid_ds: {len(valid_ds) * max_seq_length:_}")
+    elapsed = timer() - time_start
+    print(f'Chunkization time: {elapsed // 60} min')
 
-        train_ds = train_ds.shuffle(seed=96)
-        valid_ds = valid_ds.shuffle(seed=96)
+  # --------------------------------------------------------------------
+  ## Split.
 
-        train_ds_path = os.path.join(out_path, f"tokenized_{tokenizer_name}", f"ctx_{FLAGS.seq_length}", 'train')
-        valid_ds_path = os.path.join(out_path, f"tokenized_{tokenizer_name}", f"ctx_{FLAGS.seq_length}", 'valid')
+  if not FLAGS.split_train_valid:
+    chunked_ds.save_to_disk(os.path.join(out_path, f'ctx_{FLAGS.seq_length}', FLAGS.dataset_split))
 
-        if os.path.exists(train_ds_path):
-            raise FileExistsError("Trainset already exists.")
-        if os.path.exists(valid_ds_path):
-            raise FileExistsError("Validset already exists.")
+  else:
+    # NOTE: potential single-document contamination in train-valid split (similar to modded-gpt).
+    # One document might be split across both train and valid splits.
+    # We do not shuffle befre chunking, to avoid mulutple documents contamination.
 
-        print("Saving trainset")
-        train_ds.save_to_disk(train_ds_path)
-        print("Saving validset")
-        valid_ds.save_to_disk(valid_ds_path)
+    n_chunks_valid = FLAGS.n_tokens_valid // max_seq_length
+    valid_ds = chunked_ds.select(range(n_chunks_valid))
+    train_ds = chunked_ds.select(range(n_chunks_valid, len(chunked_ds)))
 
-    print("Succesfull completion.")
+    print(f'Number of tokens in train_ds: {len(train_ds) * max_seq_length:_}')
+    print(f'Number of tokens in valid_ds: {len(valid_ds) * max_seq_length:_}')
 
-if __name__ == "__main__":
-    app.run(main)
+    train_ds = train_ds.shuffle(seed=96)
+    valid_ds = valid_ds.shuffle(seed=96)
 
+    train_ds_path = os.path.join(out_path, f'tokenized_{tokenizer_name}', f'ctx_{FLAGS.seq_length}', 'train')
+    valid_ds_path = os.path.join(out_path, f'tokenized_{tokenizer_name}', f'ctx_{FLAGS.seq_length}', 'valid')
+
+    if os.path.exists(train_ds_path):
+      raise FileExistsError('Trainset already exists.')
+    if os.path.exists(valid_ds_path):
+      raise FileExistsError('Validset already exists.')
+
+    print('Saving trainset')
+    train_ds.save_to_disk(train_ds_path)
+    print('Saving validset')
+    valid_ds.save_to_disk(valid_ds_path)
+
+  print('Succesfull completion.')
+
+
+if __name__ == '__main__':
+  app.run(main)
