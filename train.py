@@ -18,7 +18,6 @@ FLAGS = flags.FLAGS
 
 
 def main(_):
-
   CFG_PATH, JOB_IDX = FLAGS.config, FLAGS.job_idx
   cfg, _ = utils.load_config(CFG_PATH, JOB_IDX)
 
@@ -44,22 +43,26 @@ def main(_):
   engine = TorchEngine(model, cfg, device, local_rank, ckpt)
 
   # If we are just cooling down, we set budget = resume + cooldown
-  steps_budget = cfg.steps_budget if cfg.scheduler != "linear_cooldown" else cfg.resume_step + engine.scheduler.cooldown_steps
+  steps_budget = (
+    cfg.steps_budget if cfg.scheduler != 'linear_cooldown' else cfg.resume_step + engine.scheduler.cooldown_steps
+  )
   micro_step_budget = steps_budget * cfg.grad_accumulation_steps
   if micro_step_budget > len(trainloader):
-    raise ValueError("trainloader too short!")
+    raise ValueError('trainloader too short!')
 
   # Start the dataloader from the correct micro-batch
   step_start = cfg.resume_step if cfg.resume else 0
   micro_step_start = step_start * cfg.grad_accumulation_steps
-  print_master(f"=== Start Training from step: {step_start}/{steps_budget}, micro_step: {micro_step_start}/{micro_step_budget} ===")
+  print_master(
+    f'=== Start Training from step: {step_start}/{steps_budget}, micro_step: {micro_step_start}/{micro_step_budget} ==='
+  )
 
   # Bookkeeping
   metrics = defaultdict(list)
   train_loss_array = []
 
   # Training
-  for micro_step, micro_batch in enumerate(trainloader, micro_step_start+1):
+  for micro_step, micro_batch in enumerate(trainloader, micro_step_start + 1):
     step = micro_step // cfg.grad_accumulation_steps
     is_step = micro_step % cfg.grad_accumulation_steps == 0
     if step > steps_budget and is_step:
@@ -72,7 +75,7 @@ def main(_):
     # Eval
     valid_loss = None
     if cfg.eval and step % cfg.eval_every_steps == 0 and is_step:
-      print_master("Evaluating on validation set")
+      print_master('Evaluating on validation set')
       valid_loss = engine.eval(validloader)
 
     # Log
@@ -85,7 +88,7 @@ def main(_):
       save_checkpoint(step, model, engine, cfg, metrics, JOB_IDX)
 
   # End of training: log and save checkpoint
-  print_master("=== Training Completed! ===")
+  print_master('=== Training Completed! ===')
   if master_process and cfg.save_last_checkpoint:
     save_checkpoint(step, model, engine, cfg, metrics, JOB_IDX)
 
@@ -93,5 +96,5 @@ def main(_):
   destroy_ddp()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   app.run(main)

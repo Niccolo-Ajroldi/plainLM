@@ -1,4 +1,3 @@
-
 import torch
 
 from torch import distributed as dist
@@ -13,17 +12,15 @@ from data.datasets.data_prep_utils import intra_doc_causal_mask
 
 def _move_to_device(batch, seq_len, device, intra_doc_masking):
   """Slice batch to get inputs and targets, and move them to device."""
-  
-  inputs = batch['input_ids'][:,:seq_len]
-  targets = batch['input_ids'][:,1:(seq_len+1)]
+
+  inputs = batch['input_ids'][:, :seq_len]
+  targets = batch['input_ids'][:, 1 : (seq_len + 1)]
 
   if intra_doc_masking:
     # build one mask per example and stack into (bsz, L, L)
-    masks = [
-      intra_doc_causal_mask(doc_lengths, seq_len+1, device) for doc_lengths in batch['docs_lengths']
-    ]
-    attn_mask = torch.stack(masks, dim=0) # (bsz, L+1, L+1)
-    attn_mask = attn_mask[:, :seq_len, :seq_len].contiguous() # (bsz, L, L)
+    masks = [intra_doc_causal_mask(doc_lengths, seq_len + 1, device) for doc_lengths in batch['docs_lengths']]
+    attn_mask = torch.stack(masks, dim=0)  # (bsz, L+1, L+1)
+    attn_mask = attn_mask[:, :seq_len, :seq_len].contiguous()  # (bsz, L, L)
   else:
     attn_mask = None
 
@@ -42,16 +39,10 @@ class TorchEngine(torch.nn.Module):
   A module containing model, optimizer, scheduler, grad scaler.
   Wraps together a training step. Takes care of grad accumulation.
   """
-  def __init__(
-      self,
-      model,
-      cfg,
-      device,
-      local_rank,
-      ckpt,
-      ):
+
+  def __init__(self, model, cfg, device, local_rank, ckpt):
     super().__init__()
-    
+
     self.micro_steps = 0
     self.accumulated_samples = 0
 
@@ -59,10 +50,10 @@ class TorchEngine(torch.nn.Module):
     self.accumulation_steps = cfg.grad_accumulation_steps
     self.grad_clip = cfg.grad_clip
     self.dtype = cfg.dtype
-    self.intra_doc_masking = getattr(cfg, "intra_doc_masking", False)
+    self.intra_doc_masking = getattr(cfg, 'intra_doc_masking', False)
 
     self.device = device
-    
+
     # Load model state dict
     if cfg.resume:
       model.load_state_dict(ckpt['state_dict'])
@@ -75,7 +66,7 @@ class TorchEngine(torch.nn.Module):
 
     # Compile
     if cfg.torch_compile:
-      print("Compiling the model...")
+      print('Compiling the model...')
       self.model = torch.compile(self.model)
 
     # AMP
@@ -99,12 +90,11 @@ class TorchEngine(torch.nn.Module):
       self.scheduler.load_state_dict(ckpt['scheduler'])
       self.scaler.load_state_dict(ckpt['scaler'])
 
-
   def step(self, batch):
     """Wraps a fwd pass, bwd pass, and optimization step."""
-    
+
     self.model.train()
-    
+
     self.micro_steps += 1
     self.accumulated_samples += 1
 
@@ -112,8 +102,7 @@ class TorchEngine(torch.nn.Module):
 
     # sync (reduce) gradients at the last accumulation step
     if torch.distributed.is_initialized():
-      self.model.require_backward_grad_sync = \
-        (self.accumulated_samples == self.accumulation_steps)
+      self.model.require_backward_grad_sync = self.accumulated_samples == self.accumulation_steps
 
     # forward pass with autocasting
     with self.ctx:
@@ -125,7 +114,7 @@ class TorchEngine(torch.nn.Module):
     # detach for logging (scale up to undo the division above)
     loss_val = loss.detach() * self.accumulation_steps
     if torch.isnan(loss_val):
-      raise ValueError("Train loss is nan")
+      raise ValueError('Train loss is nan')
 
     # backward pass, with gradient scaling if training in fp16
     self.scaler.scale(loss).backward()
@@ -143,21 +132,20 @@ class TorchEngine(torch.nn.Module):
       self.scaler.update()
 
       # flush the gradients
-      self.optimizer.zero_grad(set_to_none=True) 
-      
+      self.optimizer.zero_grad(set_to_none=True)
+
       # step the scheduler
       if self.scheduler:
         self.scheduler.step()
-  
-    return loss_val
 
+    return loss_val
 
   @torch.no_grad()
   def eval(self, dataloader):
     """Evaluate model on a dataloader."""
-    
+
     self.model.eval()
-    
+
     # Compute loss on dataloader
     total_loss = 0.0
     num_batches = 0
@@ -167,10 +155,10 @@ class TorchEngine(torch.nn.Module):
         output = self.model(inputs, attn_mask)
         logits = getattr(output, 'logits', output)
         loss = self.criterion(logits.view(-1, logits.size(-1)), targets.view(-1))
-    
+
       if torch.isnan(loss) or loss is None:
-        raise ValueError("Validation loss is nan")
-    
+        raise ValueError('Validation loss is nan')
+
       total_loss += loss.item()
       num_batches += 1
 
@@ -181,7 +169,7 @@ class TorchEngine(torch.nn.Module):
       dist.all_reduce(total_loss_tensor, op=dist.ReduceOp.SUM)
       dist.all_reduce(num_batches_tensor, op=dist.ReduceOp.SUM)
       total_loss = total_loss_tensor.item() / dist.get_world_size()
-      num_batches = num_batches_tensor.item() // dist.get_world_size() # superflous if drop_last=True in dataloader
+      num_batches = num_batches_tensor.item() // dist.get_world_size()  # superflous if drop_last=True in dataloader
 
     # calculate average loss
     avg_loss = total_loss / num_batches
