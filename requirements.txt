@@ -1,7 +1,0 @@
-absl-py>=2.1.0
-numpy>=2.3.4
-PyYAML>=6.0.3
-schedulefree>=1.4.1
-torch>=2.6.0
-transformers>=4.44.2
-wandb>=0.22.

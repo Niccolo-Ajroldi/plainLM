@@ -1,5 +1,11 @@
 [project]
 name = "plainLM"
+description = "Pretrain transofmrers on causal language modeling using PyTorch."
+authors = [
+    { name = "Niccolò Ajroldi" }
+]
+license = { file = "LICENSE" }
+readme = "README.md"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
