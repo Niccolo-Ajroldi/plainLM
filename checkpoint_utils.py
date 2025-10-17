@@ -44,7 +44,7 @@ def save_checkpoint(step, model, engine, cfg, metrics, job_idx=None):
   torch.save(state, save_path)
 
   # Save metrics
-  metrics_path = os.path.join(exp_dir, f'metrics.json')
+  metrics_path = os.path.join(exp_dir, 'metrics.json')
   with open(metrics_path, 'w') as f:
     json.dump(dict(metrics), f)
 

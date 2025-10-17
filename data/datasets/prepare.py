@@ -102,8 +102,10 @@ FLAGS = flags.FLAGS
 def tokenize_batched(examples, tokenizer):
   bos_token = tokenizer.bos_token
   eos_token = tokenizer.eos_token
-  add_eos = lambda seq: (bos_token + seq + eos_token) if seq else seq
-  add_eos_batched = lambda seqs: [add_eos(seq) for seq in seqs]
+  def add_eos(seq):
+    return (bos_token + seq + eos_token) if seq else seq
+  def add_eos_batched(seqs):
+    return [add_eos(seq) for seq in seqs]
   tokenized_output = tokenizer(
       add_eos_batched(examples["text"]),
       add_special_tokens=False,

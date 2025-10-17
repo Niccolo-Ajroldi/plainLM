@@ -85,7 +85,7 @@ def main(_):
       save_checkpoint(step, model, engine, cfg, metrics, JOB_IDX)
 
   # End of training: log and save checkpoint
-  print_master(f"=== Training Completed! ===")
+  print_master("=== Training Completed! ===")
   if master_process and cfg.save_last_checkpoint:
     save_checkpoint(step, model, engine, cfg, metrics, JOB_IDX)
 

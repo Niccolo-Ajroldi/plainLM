@@ -75,7 +75,7 @@ class TorchEngine(torch.nn.Module):
 
     # Compile
     if cfg.torch_compile:
-      print(f"Compiling the model...")
+      print("Compiling the model...")
       self.model = torch.compile(self.model)
 
     # AMP

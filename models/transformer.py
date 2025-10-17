@@ -89,7 +89,9 @@ class Transformer(nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.n_layers = cfg.n_layers
-        head_dim = cfg.dim // cfg.n_heads; assert cfg.dim % cfg.n_heads == 0
+        head_dim = cfg.dim // cfg.n_heads
+        if cfg.dim % cfg.n_heads != 0:
+          raise ValueError("dim must be divisible by n_heads")
         
         self.embed_tokens = nn.Embedding(cfg.vocab_size, cfg.dim)
         self.layers = nn.ModuleList([Block(idx, cfg) for idx in range(cfg.n_layers)])
@@ -135,7 +137,7 @@ class Transformer(nn.Module):
         n_params = sum(p.numel() for p in self.parameters())
         if non_embedding:
             n_params -= self.embed_tokens.weight.numel()
-            if not self.lm_head.weight is self.embed_tokens.weight:  # if no weight tying
+            if self.lm_head.weight is not self.embed_tokens.weight:  # if no weight tying
                 n_params -= self.lm_head.weight.numel()
         return n_params
 

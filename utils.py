@@ -82,7 +82,7 @@ def _matching_wandb_run_exists(cfg):
       "scheduler", "warmup_steps", "cooldown_steps", "lr_start", "lr_end", "lr_end_pct",
       "sampler_seed", "seed",
     }}
-    print(f"Checking for wand runs with the same config....")
+    print("Checking for wand runs with the same config....")
     # print(f"Matching config: {to_match_config}\n\n")
 
     # Separate non-float and float keys
@@ -147,14 +147,14 @@ def log(cfg, metrics, micro_step, train_loss, train_loss_array, valid_loss, opti
     train_loss_avg = train_loss_array.item()
 
   new_metrics = {
-    f"micro_step": micro_step,
-    f"step": micro_step // cfg.grad_accumulation_steps,
-    f"tokens": micro_step * cfg.micro_batch_size * cfg.seq_len * world_size,
-    f"lr": optimizer.param_groups[0].get("lr", float("NaN")),
-    f"train/loss": train_loss.item(),
-    f"train/loss_avg": train_loss_avg,
-    f"train/ppl": math.exp(train_loss),
-    f"train/ppl_avg": math.exp(train_loss_avg),
+    "micro_step": micro_step,
+    "step": micro_step // cfg.grad_accumulation_steps,
+    "tokens": micro_step * cfg.micro_batch_size * cfg.seq_len * world_size,
+    "lr": optimizer.param_groups[0].get("lr", float("NaN")),
+    "train/loss": train_loss.item(),
+    "train/loss_avg": train_loss_avg,
+    "train/ppl": math.exp(train_loss),
+    "train/ppl_avg": math.exp(train_loss_avg),
   }
   if valid_loss is not None:
     new_metrics["valid/loss"] = valid_loss
