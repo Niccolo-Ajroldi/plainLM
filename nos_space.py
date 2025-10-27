@@ -89,7 +89,7 @@ class NOSSpace(neps.PipelineSpace):
             prior_confidence="low",
         )
 
-        self.optimizer_creator = neps.Operation(
+        self.optimizer_cls = neps.Operation(
             operator=self.create_optimizer,
             args=(
                 neps.Resampled(self._element),
@@ -263,7 +263,7 @@ class NOSSpace2(neps.PipelineSpace):
             tuple(self._shared_lines[:i]) for i in range(1, max_lines + 1)
         )
 
-        self.optimizer_creator = neps.Operation(
+        self.optimizer_cls = neps.Operation(
             operator=self.create_optimizer,
             args=(neps.Categorical(choices=self._line_choices)),
         )
@@ -348,7 +348,7 @@ class NOSSpace2(neps.PipelineSpace):
                         p.data = p.data - self.lr * state["u"]
 
                 return loss
-            
+
             def __repr__(self) -> str:
                 string = f"{self.__class__.__name__}(\n"
                 for group in self.param_groups:
