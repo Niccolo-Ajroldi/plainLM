@@ -80,7 +80,7 @@ def main(_):
     if master_process and step % cfg.log_every_steps == 0 and is_step:
       metrics["step"].append(step)
       metrics["micro_step"].append(micro_step)
-      metrics["tokens"].append(step * cfg.seq_len * world_size)
+      metrics["tokens"].append(step * cfg.seq_len * cfg.micro_batch_size * world_size)
       metrics["lr"].append(engine.optimizer.param_groups[0]["lr"])
       metrics["train/loss"].append(train_loss.item())
       utils.log(cfg, metrics)

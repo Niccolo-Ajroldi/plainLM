@@ -5,6 +5,9 @@ from torch import distributed as dist
 from torch.nn import CrossEntropyLoss
 from torch.nn.parallel import DistributedDataParallel as DDP
 
+from models import get_param_groups
+from optim import intialize_optimizer, initialize_scheduler
+
 
 def _move_to_device(batch, seq_len, device):
   """Slice batch to get inputs and targets, and move them to device."""
@@ -73,7 +76,10 @@ class TorchEngine(torch.nn.Module):
     # Loss
     self.criterion = CrossEntropyLoss()
 
-    # Optimizer usually defined here, but we define it in main for ease of use with NOS
+    # If we are running with NOS, we define the optimizer in main.
+    if hasattr(cfg, 'optim'):
+      self.optimizer = intialize_optimizer(model.parameters(), cfg)
+      self.scheduler = initialize_scheduler(self.optimizer, cfg)
 
   def step(self, batch):
     """Wraps a fwd pass, bwd pass, and optimization step."""

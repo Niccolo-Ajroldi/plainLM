@@ -66,7 +66,7 @@ def initialize_scheduler(optimizer, cfg):
       else int(cfg.cooldown_steps * cfg.steps_budget)
     )
 
-  ##Final LR of the schedule
+  ## Final LR of the schedule
   # either specified directly via `lr_end` or as a fraction of top lr via `lr_end_pct`
   if getattr(cfg, "lr_end", None) is not None or getattr(cfg, "lr_end_pct", None) is not None:
     lr_end = cfg.lr_end if (cfg.lr_end is not None) else (cfg.lr_end_pct * cfg.lr)

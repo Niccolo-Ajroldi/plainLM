@@ -7,7 +7,7 @@ seed: 1996
 
 trainset_path: "/home/hk-project-p0023364/hgf_omt7140/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train"
 vocab_size: 50277
-seq_len: 2048
+seq_len: 1024
 sampler: 'stateful_random'
 sampler_seed: 1996
 num_workers: 4
@@ -17,14 +17,15 @@ validset_path: "/home/hk-project-p0023364/hgf_omt7140/data/lm/fwedu/fwedu_sample
 valid_tokens: 1000000  # 1M
 eval_every_steps: 100
 
+# 18M (5_115_136 non-embedding)
 model: 'transformer'
-d_model: 512
+d_model: 256
 mlp_class: 'glu'
 expand: '8/3'
 n_layers: 6
 n_heads: 8
 rms_norm: True
-tie_embeddings: False
+tie_embeddings: True
 torch_compile: True
 
 # Allow TF32 matmul for speedups on Ampere+ GPUs
@@ -35,21 +36,23 @@ steps_budget: 20000 # assuming bsz=256: tot 10_485_760_000 tokens (~10B)
 
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
-micro_batch_size: 24
+micro_batch_size: 56
 grad_accumulation_steps: 1
 
 # note: choose between {float32, float16, bfloat16}
 # note: float16 data type will automatically use a GradScaler
 dtype: 'bfloat16'
 
-lr: 0.001 # placeholeder, will be set by nos_train.py
+optim: 'adamw'
+fused_optim: True
+lr: 0.001
 weight_decay: 0.1
 beta1: 0.9
 beta2: 0.95
 grad_clip: 1.0
 
 scheduler: 'wsd'
-warmup_steps: 0.05 # 5%
+warmup_steps: 0.02 # 2%
 cooldown_steps: 0.2 # 20%
 lr_start: 0.0
 lr_end: 0.0

@@ -19,7 +19,7 @@ import utils
 from checkpoint_utils import maybe_load_checkpoint, save_checkpoint
 from data import get_dataloaders
 from engine import TorchEngine
-from models import construct_model, get_param_groups
+from models import construct_model
 from optim import initialize_scheduler
 from torch_utils import destroy_ddp, pytorch_setup
 from utils import print_master
@@ -73,9 +73,8 @@ def train(
   engine = TorchEngine(model, cfg, device, local_rank, ckpt)
 
   # Optimizer is usually defined by engine, we define it here for ease of use with NOS
-  param_groups = get_param_groups(model, cfg)
   engine.optimizer = optimizer_cls(
-    param_groups, 
+    model.parameters(), 
     lr=cfg.lr, 
     weight_decay=cfg.weight_decay, 
     betas=(cfg.beta1, cfg.beta2),

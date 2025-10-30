@@ -28,8 +28,7 @@ tie_embeddings: False
 torch_compile: True
 
 # Allow TF32 matmul for speedups on Ampere+ GPUs
-cuda_matmul_allow_tf32: True
-cudnn_allow_tf32: True
+allow_tf32: True
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
 steps_budget: 20000 # assuming bsz=256: tot 10_485_760_000 tokens (~10B)
