@@ -11,6 +11,9 @@ def scale_by_constant(constant):
 def clamp_by_constant(constant):
     return partial(torch.clamp, min=-constant, max=constant)
 
+def interpolate(constant):
+    return partial(torch.lerp, weight=constant)
+
 
 def resolve_expression(expr, var_dict):
     # recursively evaluate nested tuples of the form (callable, arg1, arg2, ...)
@@ -223,6 +226,10 @@ class NOSSpace2(neps.PipelineSpace):
             choices=(
                 torch.add,
                 torch.mul,
+                neps.Operation(
+                    interpolate,
+                    kwargs={"constant": neps.Resampled(self._constants)},
+                )
             )
         )
 
@@ -358,7 +365,33 @@ class NOSSpace2(neps.PipelineSpace):
                             string += f"    {k}: {v}\n"
                 string += ")\nLines:\n"
                 for line in lines:
-                    string += f"  {line}\n"
+                    target_var = line[0]
+                    expression = line[1]
+                    if isinstance(expression, tuple):
+                        string += f"  {target_var}="
+                        expr = expression
+                        if callable(expr[0]):
+                            if isinstance(expr[0], partial):
+                                string += f"{expr[0].func.__name__}("
+                                if expr[0].keywords:
+                                    string += "{"
+                                    for k, v in expr[0].keywords.items():
+                                        string += f"{k}={v}, "
+                                    string = string.rstrip(", ")
+                                    string += "}, "
+                            else:
+                                string += f"{expr[0].__name__}("
+                            for arg in expr[1:]:
+                                string += f"{arg}, "
+                        else:
+                            string += f"{expr[0]}"
+                        string = string.rstrip(", ")
+                        string += ")\n"
+                    else:
+                        string += f"  {target_var}={expression[0]}\n"
                 return string
+            
+            def get_lines(self):
+                return lines
 
         return CustomOptimizer
