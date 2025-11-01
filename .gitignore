@@ -30,3 +30,6 @@ Thumbs.db
 # Ignore Weights & Biases (wandb) files
 wandb/
 *.wandb
+
+# Ignore png files
+synthetic/plots/
