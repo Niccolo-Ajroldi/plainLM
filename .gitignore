@@ -32,4 +32,4 @@ wandb/
 *.wandb
 
 # Ignore png files
-synthetic/plots/
+synthetic/*plots/
