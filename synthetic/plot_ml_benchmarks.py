@@ -92,9 +92,10 @@ def plot_best_loss_over_samples(results, output_dir="ml_plots"):
         
         ax.set_xlabel('Iteration', fontsize=12, fontweight='bold')
         ax.set_ylabel('Best Loss Found So Far', fontsize=12, fontweight='bold')
-        ax.set_title(f'{benchmark_name.replace("_", " ").title()} - All Methods Comparison', 
+        ax.set_title(f'{benchmark_name.replace("_", " ").title()} - D={results["n_dims"]}, N={results["n_samples"]}, steps={results["n_steps"]}, ', 
                      fontsize=14, fontweight='bold')
         ax.set_xscale('log')
+        ax.set_yscale('log')
         ax.grid(True, alpha=0.3)
         ax.legend(fontsize=10)
         

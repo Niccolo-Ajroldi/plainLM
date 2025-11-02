@@ -15,7 +15,7 @@ import neps
 from neps import Trial
 from neps.state import trial
 from neps.space.neps_spaces import sampling, neps_space
-from nos_space import NOSSpace2
+from nos_space import NOSSpaceMaxLines
 import torch.optim as optim
 from functools import partial
 
@@ -309,7 +309,7 @@ if __name__ == "__main__":
         'optimizers': []
     }
 
-    space = NOSSpace2(max_lines=10)
+    space = NOSSpaceMaxLines(max_lines=10)
     # RS
     random_sampler = sampling.RandomSampler({})
     prior_sampler = sampling.PriorOrFallbackSampler(random_sampler)
@@ -328,7 +328,7 @@ if __name__ == "__main__":
         optimizer_creator_rs = neps_space.convert_operation_to_callable(optimizer_creator_object_rs)
 
         # Sample with RE too #############
-        config = neps.algorithms.neps_regularized_evolution(NOSSpace2(), population_size=20, tournament_size=5)(trials, None)
+        config = neps.algorithms.neps_regularized_evolution(NOSSpaceMaxLines(), population_size=20, tournament_size=5)(trials, None)
         assert not isinstance(config, list)
         samplings = neps_space.NepsCompatConverter().from_neps_config(config.config).predefined_samplings
 
