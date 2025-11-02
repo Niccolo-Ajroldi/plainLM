@@ -31,7 +31,7 @@ def main(_):
     utils.log_job_info(FLAGS)
 
   # Load checkpoint
-  ckpt = maybe_load_checkpoint(cfg)
+  ckpt = maybe_load_checkpoint(cfg, device)
 
   # Dataset
   trainloader, validloader = get_dataloaders(cfg)
