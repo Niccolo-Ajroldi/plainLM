@@ -66,19 +66,6 @@ def get_ml_benchmark_function(name: str, seed: int = 0, n_samples: int = 100, n_
         
         return loss_fn, [w], f"Logistic Regression (Mildly Non-Convex, n={n}, d={d})"
     
-    elif name == 'noisy_regression':
-        n, d = n_samples, n_dims
-        X = torch.randn(n, d)
-        true_w = torch.randn(d)
-        y = X @ true_w
-        w = torch.randn(d, requires_grad=True)
-        
-        def loss_fn():
-            noise = 0.1 * torch.randn(())
-            return torch.mean((X @ w - y)**2) + noise
-        
-        return loss_fn, [w], f"Noisy Regression (Convex + Noise, n={n}, d={d})"
-    
     elif name == 'xor_mlp':
         # XOR problem is fixed at 2D input, but we can scale hidden layer with n_dims
         X = torch.tensor([[0,0],[0,1],[1,0],[1,1]], dtype=torch.float32)
@@ -238,7 +225,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--benchmarks",
         nargs="+",
-        default=['linear_regression', 'logistic_regression', 'noisy_regression', 'xor_mlp', 'autoencoder'],
+        default=['linear_regression', 'logistic_regression', 'xor_mlp', 'autoencoder'],
         help="List of ML benchmark names (space separated)."
     )
     parser.add_argument(
