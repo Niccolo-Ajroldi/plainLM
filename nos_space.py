@@ -113,7 +113,7 @@ class NOSSpaceMaxLines(neps.PipelineSpace):
             args=(neps.Categorical(choices=self._line_choices)),
         )
 
-        self.learning_rate = neps.Float(min_value=1e-5, max_value=1e-2, log=True)
+        self.learning_rate = neps.Float(lower=1e-5, upper=1e-2, log=True)
 
     @staticmethod
     def unaryFunction(operation: Callable, input_value):
@@ -309,7 +309,7 @@ class NOSSpace3Lines(neps.PipelineSpace):
             ),
         )
 
-        self.learning_rate = neps.Float(min_value=1e-5, max_value=1e-2, log=True)
+        self.learning_rate = neps.Float(lower=1e-5, upper=1e-2, log=True)
 
     @staticmethod
     def unaryFunction(operation: Callable, input_value):
