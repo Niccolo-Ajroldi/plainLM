@@ -164,7 +164,7 @@ def maybe_make_dir(cfg):
     yaml.dump(cfg._asdict(), file, default_flow_style=False)
 
 
-def log(cfg, metrics, micro_step, train_loss, train_loss_array, valid_loss, optimizer, world_size, grad_norms=None):
+def log(cfg, metrics, micro_step, train_loss, train_loss_array, valid_loss, optimizer, world_size):
   """Update metrics, print to console, log on wandb."""
 
   if isinstance(train_loss_array, list):
@@ -183,10 +183,6 @@ def log(cfg, metrics, micro_step, train_loss, train_loss_array, valid_loss, opti
     'train/ppl_avg': math.exp(train_loss_avg),
   }
 
-  if grad_norms is not None:
-    new_metrics["grad_norm/l1"] = grad_norms.get('l1_norm', float("NaN"))
-    new_metrics["grad_norm/l2"] = grad_norms.get('l2_norm', float("NaN"))
-    
   if valid_loss is not None:
     new_metrics['valid/loss'] = valid_loss
     new_metrics['valid/ppl'] = math.exp(valid_loss)
