@@ -1,4 +1,3 @@
-
 import torch
 
 from datasets import Dataset, load_from_disk
@@ -11,18 +10,18 @@ from data.datasamplers import StatefulSequentialSampler, StatefulRandomSampler, 
 
 def get_dataloaders(cfg):
   """Load trainset and perhaps validset. Returns correspondent DataLoaders."""
-  
+
   train_set = load_from_disk(cfg.trainset_path)
-  if not isinstance(train_set , Dataset):
-    raise ValueError("dataset should be a datasets.Dataset")
+  if not isinstance(train_set, Dataset):
+    raise ValueError('dataset should be a datasets.Dataset')
 
   train_sampler = _get_sampler(train_set, cfg)
 
   # only used with intra-document masking
   def collate_fn(batch):
     return {
-      "input_ids": torch.stack([x["input_ids"] for x in batch], dim=0),
-      "docs_lengths": [x["docs_lengths"].tolist() for x in batch]
+      'input_ids': torch.stack([x['input_ids'] for x in batch], dim=0),
+      'docs_lengths': [x['docs_lengths'].tolist() for x in batch],
     }
 
   trainloader = DataLoader(
@@ -33,7 +32,7 @@ def get_dataloaders(cfg):
     pin_memory=True,
     prefetch_factor=2 if cfg.num_workers > 0 else None,
     persistent_workers=True if cfg.num_workers > 0 else False,
-    collate_fn=collate_fn if 'docs_lengths' in train_set.column_names else None
+    collate_fn=collate_fn if 'docs_lengths' in train_set.column_names else None,
   )
 
   if not cfg.validset_path:
@@ -62,9 +61,9 @@ def get_dataloaders(cfg):
       pin_memory=True,
       prefetch_factor=2 if cfg.num_workers > 0 else None,
       persistent_workers=False,
-      collate_fn=collate_fn if 'docs_lengths' in train_set.column_names else None
+      collate_fn=collate_fn if 'docs_lengths' in train_set.column_names else None,
     )
-  
+
   return trainloader, validloader
 
 
@@ -79,19 +78,21 @@ def _get_sampler(train_set, cfg):
   """
   ddp = dist.is_initialized()
 
-  if cfg.sampler == "random":
+  if cfg.sampler == 'random':
     if ddp:
       sampler = DistributedSampler(train_set, shuffle=True, seed=cfg.sampler_seed, drop_last=True)
     else:
-      sampler = RandomSampler(train_set, generator=torch.Generator().manual_seed(cfg.sampler_seed) if cfg.sampler_seed else None)
+      sampler = RandomSampler(
+        train_set, generator=torch.Generator().manual_seed(cfg.sampler_seed) if cfg.sampler_seed else None
+      )
 
-  elif cfg.sampler == "sequential":
+  elif cfg.sampler == 'sequential':
     if ddp:
       sampler = DistributedSampler(train_set, shuffle=False, drop_last=True)
     else:
       sampler = SequentialSampler(train_set)
 
-  elif cfg.sampler == "stateful_random":
+  elif cfg.sampler == 'stateful_random':
     micro_step_start = cfg.resume_step * cfg.grad_accumulation_steps if cfg.resume else 0
     if ddp:
       # TODO: allow support for drop_last=True!
@@ -103,15 +104,14 @@ def _get_sampler(train_set, cfg):
         train_set, batch_size=cfg.micro_batch_size, shuffle=True, seed=cfg.sampler_seed, start_idx=micro_step_start
       )
 
-  elif cfg.sampler == "stateful_sequential":
+  elif cfg.sampler == 'stateful_sequential':
     micro_step_start = cfg.resume_step * cfg.grad_accumulation_steps if cfg.resume else 0
     if ddp:
-      raise NotImplementedError("StatefulDistributedSampler currently needs a seed.")
+      raise NotImplementedError('StatefulDistributedSampler currently needs a seed.')
     else:
       sampler = StatefulSequentialSampler(train_set, batch_size=cfg.micro_batch_size, start_idx=micro_step_start)
 
   else:
-    raise NotImplementedError(f"Sampler {cfg.sampler} is not implemented.")
+    raise NotImplementedError(f'Sampler {cfg.sampler} is not implemented.')
 
   return sampler
-  
