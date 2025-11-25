@@ -10,7 +10,7 @@ from optim import intialize_optimizer, initialize_scheduler
 from data.datasets.data_prep_utils import intra_doc_causal_mask
 
 
-def _move_to_device(batch, seq_len, device, intra_doc_masking):
+def _move_to_device(batch, seq_len, device, intra_doc_masking=False):
   """Slice batch to get inputs and targets, and move them to device."""
   
   inputs = batch['input_ids'][:,:seq_len]
@@ -102,6 +102,8 @@ class TorchEngine(torch.nn.Module):
     """Wraps a fwd pass, bwd pass, and optimization step."""
     
     self.model.train()
+    if hasattr(self.optimizer, 'train'):
+      self.optimizer.train() # supports ScheduleFree
     
     self.micro_steps += 1
     self.accumulated_samples += 1
@@ -164,6 +166,8 @@ class TorchEngine(torch.nn.Module):
     """Evaluate model on a dataloader."""
     
     self.model.eval()
+    if hasattr(self.optimizer, 'eval'):
+      self.optimizer.eval() # supports ScheduleFree
     
     # Compute loss on dataloader
     total_loss = 0.0

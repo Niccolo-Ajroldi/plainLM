@@ -1,0 +1,85 @@
+
+## => run with this bsz=128 on 1GPU
+
+# avg
+eval_ckpt_folder: "/fast/atatjer/scalinglawsquantization/checkpoints/nld_baseline_01/job_idx_0"
+avg_start_step: 0
+avg_every_steps: 2
+avg_scheme: "LogSpacedLAWA"
+lawa_queue_len: 10
+
+deterministic: False
+seed: 1996
+
+trainset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_10BT/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train" # tokens: 9_849_288_704
+vocab_size: 50277
+seq_len: 2048
+intra_doc_masking: False
+sampler: 'stateful_random'
+sampler_seed: 1996
+num_workers: 4
+
+eval: True
+validset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_10BT/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
+valid_tokens: 1000000
+eval_every_steps: 100
+
+model: 'pythia-160m'
+torch_compile: True
+
+# Allow TF32 matmul for speedups on Ampere+ GPUs
+cuda_matmul_allow_tf32: True
+cudnn_allow_tf32: True
+
+# note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps)
+steps_budget: 18500
+
+# note 1: this is micro batch size if grad_accumulation_steps>1
+# note 2: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
+micro_batch_size: 56
+grad_accumulation_steps: null
+
+# note: choose between {float32, float16, bfloat16}
+# note: float16 data type will automatically use a GradScaler
+dtype: 'bfloat16'
+
+optim: null
+fused_optim: null
+lr: null
+weight_decay: null
+beta1: null
+beta2: null
+grad_clip: null
+eps: null
+
+scheduler: null
+warmup_steps: null
+cooldown_steps: null
+lr_start: null
+lr_end: null
+lr_end_pct: null
+
+log_every_steps: null
+print_progress: null
+
+use_wandb: False
+wandb_watch: False
+check_existing_wandb_run: False
+wandb_project: 'wa_lm_2'
+wandb_dir: '/fast/najroldi/logs/quant/wandb'
+wandb_run_name: 'nld_log_lawa_01'
+exp_name: 'nld_log_lawa_01'
+
+resume: null
+resume_step: null
+resume_exp_name: null
+
+out_dir: '/fast/atatjer/scalinglawsquantization/checkpoints'
+save_last_checkpoint: False
+save_intermediate_checkpoints: True
+save_every_steps: 100
+save_optim: False
+save_scheduler: False
+save_scaler: False
+
+over_write: True

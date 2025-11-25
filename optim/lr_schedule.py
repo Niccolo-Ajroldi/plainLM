@@ -149,3 +149,88 @@ class LinearCooldown(CustomLRSchedule):
   def load_state_dict(self, state_dict):
     # We load only the iter parameter from the saved state dict.
     self.iter = state_dict.get("iter", 0)
+
+
+class WarmupInverseSqrt(CustomLRSchedule):
+  """Linear warmup followed by Inverse Square Root Decay."""
+  def __init__(self, optimizer, lr_start, lr_max, warmup_steps):
+    super().__init__(optimizer)
+    self.lr_start = lr_start
+    self.lr_max = lr_max
+    self.warmup_steps = warmup_steps
+    self.iter = 0
+    self.set_optim_lr(lr_start)
+
+  def get_lr(self, t):
+    """Computes and returns lr(t), where t is the current step."""
+    if t <= self.warmup_steps:
+      return self.lr_start + (self.lr_max-self.lr_start)/self.warmup_steps * t
+    return self.lr_max / ((t - self.warmup_steps) ** 0.5)
+    ## fairseq style would be:
+    # return self.lr_max * (self.warmup_steps ** 0.5) / (t ** 0.5) 
+
+  def step(self):
+    self.iter += 1
+    lr = self.get_lr(self.iter)
+    self.set_optim_lr(lr)
+
+
+class OneMinSqrtCooldown(CustomLRSchedule):
+  """OneMinSqrt Cooldown https://arxiv.org/pdf/2405.18392, page 4."""
+  def __init__(self, optimizer, lr_max, lr_end, cooldown_start_step, cooldown_steps):
+    super().__init__(optimizer)
+    self.lr_max = lr_max
+    self.lr_end = lr_end
+    self.cooldown_start_step = cooldown_start_step
+    self.cooldown_steps = cooldown_steps
+    self.iter = 0
+
+  def get_lr(self, t):
+    """Computes and returns lr(t), where t is the current step."""
+    if t <= self.cooldown_start_step:
+      return self.lr_max
+    return self.lr_max - self.lr_max * ((t - self.cooldown_start_step) / (self.cooldown_steps)) ** 0.5
+
+  def step(self):
+    self.iter += 1
+    lr = self.get_lr(self.iter)
+    self.set_optim_lr(lr)
+
+  def load_state_dict(self, state_dict):
+    # We load only the iter parameter from the saved state dict.
+    self.iter = state_dict.get("iter", 0)
+
+class OneMinSqrtFromInvSqrtCooldown(CustomLRSchedule):
+  """OneMinSqrt Cooldown from a Inverse Sqrt schedule."""
+  def __init__(self, optimizer, lr_start, lr_max, lr_end, warmup_steps, cooldown_start_step, cooldown_steps):
+    super().__init__(optimizer)
+    self.lr_start = lr_start
+    self.lr_max = lr_max
+    self.lr_end = lr_end
+    self.warmup_steps = warmup_steps
+    self.cooldown_start_step = cooldown_start_step
+    self.cooldown_steps = cooldown_steps
+    self.iter = 0
+    self.lr_before_decay = self.get_lr_inv_sqrt(cooldown_start_step)
+    self.set_optim_lr(self.lr_before_decay)
+
+  def get_lr_inv_sqrt(self, t):
+    """Get LR from the baseline InvSqrt schedule."""
+    if t <= self.warmup_steps:
+      return self.lr_start + (self.lr_max-self.lr_start)/self.warmup_steps * t
+    return self.lr_max / ((t - self.warmup_steps) ** 0.5)
+
+  def get_lr(self, t):
+    """Computes and returns lr(t), where t is the current step."""
+    if t <= self.cooldown_start_step:
+      return self.lr_before_decay
+    return self.lr_before_decay - self.lr_before_decay * ((t - self.cooldown_start_step) / (self.cooldown_steps)) ** 0.5
+
+  def step(self):
+    self.iter += 1
+    lr = self.get_lr(self.iter)
+    self.set_optim_lr(lr)
+
+  def load_state_dict(self, state_dict):
+    # We load only the iter parameter from the saved state dict.
+    self.iter = state_dict.get("iter", 0)

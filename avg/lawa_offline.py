@@ -1,7 +1,7 @@
 """
 Engine class for averaging weights with LAWA.
 
-We keep the EMA in CPU memory.
+We keep the LAWA in CPU memory.
 """
 
 from collections import deque

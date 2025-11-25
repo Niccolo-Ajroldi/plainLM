@@ -1,0 +1,27 @@
+
+# Executable should be a full path
+executable=/home/najroldi/plainLM/cluster/2_gpu/condor.sh
+
+# Hyperparmeters are specified in a YAML configuration file
+config=config/kumar/30M_cool_01.yaml
+
+# Queue as many jobs as points in the hyperaparameter grid
+n_jobs=4
+
+# Pass arguments to the executable
+arguments = $(config) $(Process) $(Cluster)
+
+# Logs
+LOGS_DIR=/fast/najroldi/logs/quant
+error = $(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output = $(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log = $(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Job requirements
+request_memory = 100000
+request_cpus = 8
+request_gpus = 2
+# requirements = (TARGET.CUDADeviceName == "NVIDIA A100-SXM4-80GB")
+requirements = (TARGET.CUDACapability >= 8.0)  && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB") && (TARGET.Machine != "i101.internal.cluster.is.localnet")
+
+queue $(n_jobs)

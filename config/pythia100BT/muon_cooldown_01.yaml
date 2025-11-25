@@ -1,0 +1,81 @@
+# trainset: 99_762_225_152 (~100BT)
+# validset:      9_994_240 (~10MT)
+
+deterministic: False
+seed: 100
+
+trainset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_100BT/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train"
+vocab_size: 50277
+seq_len: 2048
+intra_doc_masking: False
+sampler: 'stateful_random'
+sampler_seed: 1996
+num_workers: 4
+
+eval: True
+validset_path: "/fast/najroldi/data/lm/fwedu/fwedu_sample_100BT/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
+valid_tokens: 1000000  # 1M
+eval_every_steps: 1000
+
+model: 'pythia-160m'
+torch_compile: True
+
+# Allow TF32 matmul and cudnn
+cuda_matmul_allow_tf32: True
+cudnn_allow_tf32: True
+
+# note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
+steps_budget: 190000 # 99_614_720_000 tokens
+
+# note: this is micro batch size if grad_accumulation_steps>1
+# note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
+micro_batch_size: 32
+grad_accumulation_steps: 1
+
+# note: choose between {float32, float16, bfloat16}
+# note: float16 data type will automatically use a GradScaler
+dtype: 'bfloat16'
+
+optim: 'muon'
+optim_backup: 'adamw'
+fused_optim: True
+lr: 1.e-3
+weight_decay: 0.0
+beta1: 0.9
+beta2: 0.95
+grad_clip: 1.0
+log_grad_norms: False
+
+scheduler: 'linear_cooldown'
+warmup_steps: null
+cooldown_steps: 18000
+lr_start: 0.0
+lr_end: 0.0
+lr_end_pct: null
+
+log_every_steps: 500
+print_progress: True
+
+use_wandb: True
+wandb_project: 'quant'
+wandb_dir: '/fast/najroldi/logs/quant/wandb'
+wandb_run_name: 'pythia_160M_100BT_muon_cooldown_01'
+exp_name: 'pythia_160M_100BT_muon_cooldown_01'
+out_dir: '/fast/atatjer/scalinglawsquantization/checkpoints'
+over_write: True
+
+resume: True
+resume_exp_name: 'pythia_160M_100BT_muon_stable_01/job_idx_0'
+resume_step: [
+  2000, 
+  36000, 
+  70000, 
+  104000, 
+  138000, 
+  172000
+] # 6x
+
+save_last_checkpoint: True
+save_intermediate_checkpoints: True
+save_every_steps: 2000 # save the model every X steps
+save_optim_every_steps: 1000000 # save optimizer every Y steps

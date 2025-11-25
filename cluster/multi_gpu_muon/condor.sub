@@ -3,7 +3,7 @@
 executable=/home/najroldi/plainLM/cluster/multi_gpu_muon/condor.sh
 
 # Hyperparmeters are specified in a YAML configuration file
-config=config/pythia10BT/baseline_03.yaml
+config=config/pythia100BT/muon_cooldown_02.yaml
 
 # Queue as many jobs as points in the hyperaparameter grid
 n_jobs=5

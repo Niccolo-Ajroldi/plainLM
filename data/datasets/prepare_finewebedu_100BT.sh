@@ -13,7 +13,7 @@ mkdir -p /fast/najroldi/hf_fast
 cd ~/plainLM
 
 PYTHONPATH=. python -m pdb data/datasets/prepare.py \
-  --out_path="/fast/najroldi/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX" \
+  --out_path="/fast/najroldi/data/lm/fwedu/fwedu_sample_10BT_new" \
   --cache_path="/fast/najroldi/tmp" \
   --download --tokenize --chunk \
   --save_tokenized --save_tokenizer \

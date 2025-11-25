@@ -1,7 +1,5 @@
 """Intialize optimizer and scheduler."""
 
-from .lr_schedule import WarmupCosine, WarmupLinearDecay, WSD, WarmupConstant, LinearCooldown
-
 
 def intialize_optimizer(model, cfg):
   """
@@ -21,9 +19,22 @@ def intialize_optimizer(model, cfg):
       eps=getattr(cfg, 'eps', 1e-8)
     )
 
+  elif cfg.optim == 'albertw':
+    from .albertw import AlbertW, get_param_groups
+    param_groups = get_param_groups(model, cfg)
+    optimizer = AlbertW(
+      param_groups,
+      lr=cfg.lr,
+      betas=[cfg.beta1, cfg.beta2],
+      weight_decay=cfg.weight_decay,
+      eps=getattr(cfg, 'eps', 1e-8)
+    )
+
   elif cfg.optim == 'custom_adam':
-    from .custom_adam import CustomAdam, get_param_groups_custom_adam
-    param_groups = get_param_groups_custom_adam(model, cfg)
+    from .custom_adam import CustomAdam
+    # from .custom_adam import get_param_groups_custom_adam
+    # param_groups = get_param_groups_custom_adam(model, cfg)
+    param_groups = get_param_groups_default(model, cfg)
     optimizer = CustomAdam(
       param_groups,
       lr=cfg.lr,
@@ -80,6 +91,8 @@ def intialize_optimizer(model, cfg):
       warmup_steps=warmup_steps,
       betas=[cfg.beta1, cfg.beta2],
       weight_decay=cfg.weight_decay,
+      weight_lr_power=getattr(cfg, 'weight_lr_power', 2.0),
+      eps=getattr(cfg, 'eps', 1e-8)
     )
 
   elif cfg.optim == 'muon':
@@ -131,6 +144,7 @@ def initialize_scheduler(optimizer, cfg):
     lr_end = cfg.lr_end if (cfg.lr_end is not None) else (cfg.lr_end_pct * cfg.lr)
 
   if cfg.scheduler == "warmup_cosine":
+    from .lr_schedule import WarmupCosine
     scheduler = WarmupCosine(
       optimizer,
       lr_start=cfg.lr_start,
@@ -141,6 +155,7 @@ def initialize_scheduler(optimizer, cfg):
     )
 
   elif cfg.scheduler == "warmup_linear_decay":
+    from .lr_schedule import WarmupLinearDecay
     scheduler = WarmupLinearDecay(
       optimizer,
       lr_start=cfg.lr_start,
@@ -151,6 +166,7 @@ def initialize_scheduler(optimizer, cfg):
     )
 
   elif cfg.scheduler == "wsd":
+    from .lr_schedule import WSD
     cooldown_start_step = cfg.steps_budget - cooldown_steps
     scheduler = WSD(
       optimizer,
@@ -163,6 +179,7 @@ def initialize_scheduler(optimizer, cfg):
     )
 
   elif cfg.scheduler == "warmup_constant":
+    from .lr_schedule import WarmupConstant
     scheduler = WarmupConstant(
       optimizer,
       lr_start=cfg.lr_start,
@@ -171,11 +188,45 @@ def initialize_scheduler(optimizer, cfg):
     )
 
   elif cfg.scheduler == "linear_cooldown":
+    from .lr_schedule import LinearCooldown
     cooldown_start_step = cfg.resume_step
     scheduler = LinearCooldown(
       optimizer,
       lr_max=cfg.lr,
       lr_end=lr_end,
+      cooldown_start_step=cooldown_start_step,
+      cooldown_steps=cooldown_steps,
+    )
+  
+  elif cfg.scheduler == "warm_inv_sqrt":
+    from .lr_schedule import WarmupInverseSqrt
+    scheduler = WarmupInverseSqrt(
+      optimizer,
+      lr_start=cfg.lr_start,
+      lr_max=cfg.lr,
+      warmup_steps=warmup_steps,
+    )
+
+  elif cfg.scheduler == "oneminsqrt_cooldown":
+    from .lr_schedule import OneMinSqrtCooldown
+    cooldown_start_step = cfg.resume_step
+    scheduler = OneMinSqrtCooldown(
+      optimizer,
+      lr_max=cfg.lr,
+      lr_end=lr_end,
+      cooldown_start_step=cooldown_start_step,
+      cooldown_steps=cooldown_steps,
+    )
+
+  elif cfg.scheduler == "oneminsqrt_frominvsqrt_cooldown":
+    from .lr_schedule import OneMinSqrtFromInvSqrtCooldown
+    cooldown_start_step = cfg.resume_step
+    scheduler = OneMinSqrtFromInvSqrtCooldown(
+      optimizer,
+      lr_start=cfg.lr_start,
+      lr_max=cfg.lr,
+      lr_end=lr_end,
+      warmup_steps=warmup_steps,
       cooldown_start_step=cooldown_start_step,
       cooldown_steps=cooldown_steps,
     )

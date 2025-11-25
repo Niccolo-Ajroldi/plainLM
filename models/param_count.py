@@ -28,8 +28,42 @@ def tot_params(n_layers, d, vocab_size, weight_tying=True):
     nparams += d*vocab_size
   return nparams
 
-d = 1536
-n_layers = 24
-vocab_size = 50280
-n_params = tot_params(n_layers, d, vocab_size, weight_tying=False)
+# # 29_928_192 / 49_234_560 ##
+# n_layers = 6
+# d = 384
+# n_heads = 6
+# d_head = 64
+
+# # 50_916_352 / 76_658_176 ##
+# n_layers = 8
+# d = 512
+# n_heads = 8
+# d_head = 64
+
+# ?? / 115_158_400 ## 
+n_layers = 10
+d = 640
+# n_heads = 10
+# d_head = 64
+
+# # 123_566_592 / 162_179_328 ##
+# n_layers = 12
+# d = 768
+# n_heads = 12
+# d_head = 64
+
+# # 214_183_680 / 262_449_600 ##
+# n_layers = 15
+# d = 960
+# n_heads = 15
+# d_head = 64
+
+# # 344_616_192 / 402_535_296 ## 
+# n_layers = 18
+# d = 1152
+# n_heads = 18
+# d_head = 64
+
+vocab_size = 50277
+n_params = tot_params(n_layers, d, vocab_size, weight_tying=True)
 print(f"{int(n_params):_}")

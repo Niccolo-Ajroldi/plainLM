@@ -4,6 +4,7 @@
 
 from absl import app, flags
 from collections import defaultdict
+import wandb
 
 import utils
 from utils import print_master
@@ -32,6 +33,9 @@ def main(_):
   if cfg.use_wandb and master_process:
     utils.init_wandb(cfg)
     utils.log_job_info(FLAGS)
+    wandb.log({
+      'global_bsz': world_size * cfg.micro_batch_size * cfg.grad_accumulation_steps
+    })
 
   # Load checkpoint
   ckpt = maybe_load_checkpoint(cfg, device)
@@ -41,15 +45,21 @@ def main(_):
 
   # Model
   model, _ = construct_model(cfg)
+  print(model)
 
   # Engine
   engine = TorchEngine(model, cfg, device, local_rank, ckpt)
 
   # If we are just cooling down, we set budget = resume + cooldown
-  steps_budget = cfg.steps_budget if cfg.scheduler != "linear_cooldown" else cfg.resume_step + engine.scheduler.cooldown_steps
+  steps_budget = cfg.steps_budget if not cfg.scheduler in ("oneminsqrt_cooldown", "oneminsqrt_frominvsqrt_cooldown", "linear_cooldown") else cfg.resume_step + engine.scheduler.cooldown_steps
   micro_step_budget = steps_budget * cfg.grad_accumulation_steps
   if micro_step_budget > len(trainloader):
     raise ValueError("trainloader too short!")
+  
+  ## Save frequency: either specified directly (int) or as a fraction of steps_budget (float)
+  save_every_steps = getattr(cfg, 'save_every_steps', None)
+  if save_every_steps is not None:
+    save_every_steps = cfg.save_every_steps if isinstance(cfg.save_every_steps, int) else int(cfg.save_every_steps * steps_budget)
 
   # Start the dataloader from the correct micro-batch
   step_start = cfg.resume_step if cfg.resume else 0
@@ -83,7 +93,7 @@ def main(_):
       train_loss_array = []
 
     # Checkpoint
-    if master_process and cfg.save_intermediate_checkpoints and step % cfg.save_every_steps == 0 and is_step:
+    if master_process and cfg.save_intermediate_checkpoints and step % save_every_steps == 0 and is_step:
       save_checkpoint(step, model, engine, cfg, metrics, JOB_IDX)
 
   # End of training: log and save checkpoint

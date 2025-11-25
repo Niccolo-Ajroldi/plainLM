@@ -15,23 +15,26 @@ eval: False
 validset_path: null
 eval_every_steps: null
 
-model: 'transformer'
-d_model: 768
-mlp_class: 'glu'
-expand: '8/3'
-n_layers: 12
-n_heads: 12
-rms_norm: True
-tie_embeddings: False
+model: 'pythia-160m'
 torch_compile: True
+
+# model: 'transformer'
+# d_model: 768
+# mlp_class: 'glu'
+# expand: '8/3'
+# n_layers: 12
+# n_heads: 12
+# rms_norm: True
+# tie_embeddings: False
+# torch_compile: True
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
 steps_budget: 4800
 
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
-micro_batch_size: 32
-grad_accumulation_steps: 8
+micro_batch_size: 16
+grad_accumulation_steps: 1
 
 # note: choose between {float32, float16, bfloat16}
 # note: float16 data type will automatically use a GradScaler
@@ -39,8 +42,7 @@ dtype: 'bfloat16'
 
 optim: 'adamw'
 fused_optim: True 
-lr: 3.e-3
-weight_decay: 0.1
+lr: 3.e-3cat config.yamlconfig.yaml
 beta1: 0.9
 beta2: 0.95
 grad_clip: 1.0

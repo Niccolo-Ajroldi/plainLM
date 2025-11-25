@@ -1,0 +1,3 @@
+/fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_100BT_cooldown_03/job_idx_0/ckpt_step_20000.pth
+/fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_100BT_cooldown_03/job_idx_2/ckpt_step_88000.pth
+/fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_100BT_cooldown_03/job_idx_4/ckpt_step_156000.pth

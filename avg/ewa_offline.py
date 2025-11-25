@@ -2,6 +2,8 @@
 Engine class for averaging weights with EWA.
 
 We keep the EMA in CUDA memory.
+EMA is stored directly in model.parameters().
+Hence EMA is initialized at model initialization.
 """
 
 import torch

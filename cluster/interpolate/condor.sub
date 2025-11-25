@@ -1,0 +1,25 @@
+
+# Executable should be a full path
+executable=/home/najroldi/plainLM/cluster/interpolate/condor.sh
+
+# Logs
+LOGS_DIR=/fast/najroldi/logs/quant
+error=$(LOGS_DIR)/err/job.$(Cluster).$(Process).err
+output=$(LOGS_DIR)/out/job.$(Cluster).$(Process).out
+log=$(LOGS_DIR)/log/job.$(Cluster).$(Process).log
+
+# Args
+row_idx=$(Process)
+save_path=/fast/najroldi/exp/quant/interpol/last_to_all_1
+
+arguments=$(Process) $(Cluster) $(row_idx) $(save_path)
+
+# Job requirements
+request_memory=100000
+request_cpus=8
+request_gpus=1
+# requirements=(TARGET.CUDADeviceName == "NVIDIA A100-SXM4-40GB")
+# requirements=(TARGET.CUDACapability == 9.0) && (TARGET.Machine != "i101.internal.cluster.is.localnet")
+requirements=(TARGET.CUDACapability >= 8.0)  && (TARGET.CUDADeviceName != "NVIDIA A100-SXM4-40GB") && (TARGET.CUDADeviceName != "NVIDIA B200") && (TARGET.Machine != "i104.internal.cluster.is.localnet") && (TARGET.Machine != "i101.internal.cluster.is.localnet")
+
+queue 9

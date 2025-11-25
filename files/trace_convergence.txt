@@ -1,0 +1,7 @@
+/fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_100BT_baseline_01/job_idx_0/ckpt_step_10000.pth
+/fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_100BT_baseline_01/job_idx_0/ckpt_step_50000.pth
+/fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_100BT_resume_01/job_idx_0/ckpt_step_150000.pth
+/fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_100BT_resume_01/job_idx_0/ckpt_step_190000.pth
+/fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_100BT_cooldown_03/job_idx_0/ckpt_step_10000.pth
+/fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_100BT_cooldown_03/job_idx_1/ckpt_step_50000.pth
+/fast/atatjer/scalinglawsquantization/checkpoints/pythia_160M_100BT_cooldown_03/job_idx_4/ckpt_step_150000.pth

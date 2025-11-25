@@ -6,7 +6,7 @@ import torch
 import utils
 
 
-def _latest_checkpoint(ckpt_dir: str, prefix: str = 'checkpoint_') -> str | None:
+def _latest_checkpoint(ckpt_dir: str, prefix: str = 'ckpt_step_') -> str | None:
   """Retrieve the latest checkpoint path in a directory."""
   if not os.path.isdir(ckpt_dir):
     return None
@@ -23,17 +23,22 @@ def save_checkpoint(step, model, engine, cfg, metrics, job_idx=None):
   scheduler = engine.scheduler
   scaler = engine.scaler
 
-  ## old logic
-  # save_optim = getattr(cfg, 'save_optim', True)
-  # save_scheduler = getattr(cfg, 'save_scheduler', True)
-  # save_scaler = getattr(cfg, 'save_scaler', True)
+  if hasattr(optimizer, 'eval'):
+    optimizer.eval() # supports ScheduleFree
 
-  ## new logic
-  save_optim_every_steps = getattr(cfg, 'save_optim_every_steps', cfg.save_every_steps)
-  is_time_to_save_optim = (step % save_optim_every_steps == 0)
-  save_optim = is_time_to_save_optim
-  save_scheduler = is_time_to_save_optim
-  save_scaler = is_time_to_save_optim
+  # old logic
+  save_optim = getattr(cfg, 'save_optim', True)
+  save_scheduler = getattr(cfg, 'save_scheduler', True)
+  save_scaler = getattr(cfg, 'save_scaler', True)
+
+  # ## new logic
+  # save_optim_every_steps = getattr(cfg, 'save_optim_every_steps', save_every_steps)
+  # if save_optim_every_steps is None:
+  #   save_optim_every_steps = save_every_steps
+  # is_time_to_save_optim = (step % save_optim_every_steps == 0)
+  # save_optim = is_time_to_save_optim
+  # save_scheduler = is_time_to_save_optim
+  # save_scaler = is_time_to_save_optim
   
   state = {
     "step": step,
@@ -65,18 +70,18 @@ def maybe_load_checkpoint(cfg, device):
     # resume from a specified exp or from the same exp
     # notice that we can resume from `resume_exp_name`, but save to a different `exp_name`
     resume_exp_name = cfg.resume_exp_name if cfg.resume_exp_name is not None else cfg.exp_name
-    ckpt_dir = os.path.join(cfg.out_dir, resume_exp_name)
+    ckpt_dir = os.path.join(cfg.out_dir, resume_exp_name) # if `resume_exp_name` is already an absolute path, it will just return `resume_exp_name`
     
     # resume from a specified checkpoint or from the latest
     if cfg.resume_step is not None:
       ckpt_path = os.path.join(ckpt_dir, f'ckpt_step_{cfg.resume_step}.pth')
     else:
-      ckpt_path = _latest_checkpoint(ckpt_dir, prefix='ckpt_')
+      ckpt_path = _latest_checkpoint(ckpt_dir, prefix='ckpt_step_')
     
     # load checkpoint
     print(f"Loading checkpoint from {ckpt_path}")
     
-    ckpt = torch.load(ckpt_path, map_location=device)
+    ckpt = torch.load(ckpt_path, map_location="cpu")
 
   return ckpt
 
