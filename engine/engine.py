@@ -168,10 +168,10 @@ class TorchEngine(torch.nn.Module):
       num_batches_tensor = torch.tensor([num_batches], device=self.device, dtype=torch.int)
       dist.all_reduce(total_loss_tensor, op=dist.ReduceOp.SUM)
       dist.all_reduce(num_batches_tensor, op=dist.ReduceOp.SUM)
-      total_loss = total_loss_tensor.item() / dist.get_world_size()
-      num_batches = num_batches_tensor.item() // dist.get_world_size()  # superflous if drop_last=True in dataloader
+      total_loss = total_loss_tensor.item()
+      num_batches = num_batches_tensor.item()
 
     # calculate average loss
-    avg_loss = total_loss / num_batches
+    avg_loss = total_loss.item() / num_batches.item()
 
     return avg_loss
