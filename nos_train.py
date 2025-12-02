@@ -73,14 +73,16 @@ def train(
   engine = TorchEngine(model, cfg, device, local_rank, ckpt)
 
   # Optimizer is usually defined by engine, we define it here for ease of use with NOS
-  engine.optimizer = optimizer_cls(
-    model.parameters(), 
+  engine.optimizers = {}
+  engine.schedulers = {}
+  engine.optimizers['nos'] = optimizer_cls(
+    model.parameters(),
     lr=cfg.lr, 
     weight_decay=cfg.weight_decay, 
     betas=(cfg.beta1, cfg.beta2),
     eps=getattr(cfg, "eps", 1e-8)
   )
-  engine.scheduler = initialize_scheduler(engine.optimizer, cfg)
+  engine.schedulers['nos'] = initialize_scheduler(engine.optimizers['nos'], cfg)
 
   # If we are just cooling down, we set budget = resume + cooldown
   steps_budget = cfg.steps_budget if cfg.scheduler != "linear_cooldown" else cfg.resume_step + engine.scheduler.cooldown_steps

@@ -3,34 +3,31 @@
 import torch
 
 from .lr_schedule import WSD, LinearCooldown, WarmupConstant, WarmupCosine
+from models import get_param_groups
 
 
-def intialize_optimizer(param_groups, cfg, nos_optim=None):
+def intialize_optimizer(model, cfg):
   """
   Intialize an optimizer.
   NOTE: we pass weight_decay to optim, but it gets overwritten by the weight_decay in param_groups!
   """
-  if nos_optim is not None:
-    optimizer = nos_optim(
-      param_groups,
-      lr=cfg.lr,
-      betas=[cfg.beta1, cfg.beta2],
-      weight_decay=cfg.weight_decay,
-      eps=getattr(cfg, "eps", 1e-8),
-    )
+  optimizers = {}
 
   if cfg.optim == "adamw":
-    optimizer = torch.optim.AdamW(
+    param_groups = get_param_groups(model, cfg.weight_decay)
+    optimizers[cfg.optim] = torch.optim.AdamW(
       param_groups,
       lr=cfg.lr,
       betas=[cfg.beta1, cfg.beta2],
       weight_decay=cfg.weight_decay,
-      fused=cfg.fused_optim,
+      fused=getattr(cfg, "fused_optim", True),
       eps=getattr(cfg, "eps", 1e-8),
     )
+    
 
   elif cfg.optim == "sgd":
-    optimizer = torch.optim.SGD(
+    param_groups = get_param_groups(model, cfg.weight_decay)
+    optimizers[cfg.optim] = torch.optim.SGD(
       param_groups,
       lr=cfg.lr,
       momentum=cfg.beta1,
@@ -38,10 +35,66 @@ def intialize_optimizer(param_groups, cfg, nos_optim=None):
       weight_decay=cfg.weight_decay,
     )
 
+  elif cfg.optim == "zero1adamw":
+    from optim.zero1adamw import ZeRO1AdamW
+    param_groups = get_param_groups(model, cfg.weight_decay)
+    optimizers[cfg.optim] = ZeRO1AdamW(
+      param_groups,
+      lr=cfg.lr,
+      betas=[cfg.beta1, cfg.beta2],
+      weight_decay=cfg.weight_decay,
+      adamc_wd=getattr(cfg, "adamc_wd", False),
+      eps=getattr(cfg, "eps", 1e-8),
+    )
+
+  elif cfg.optim == "muonVanilla":
+    from optim.muon import MuonVanilla
+    from optim.muon import split_params_muon_adam
+    muon_params, adam_params = split_params_muon_adam(model)  
+    optimizers['muon'] = MuonVanilla(
+        muon_params,
+        lr=cfg.muon_lr,
+        weight_decay=cfg.muon_weight_decay,
+        beta=cfg.muon_beta,
+        nesterov=cfg.muon_nesterov,
+        ns_steps=cfg.muon_ns_steps,
+        ns_eps=cfg.muon_ns_eps
+    )
+    optimizers['adamw'] = torch.optim.AdamW(
+        adam_params,
+        lr=cfg.adamw_lr,
+        weight_decay=cfg.adamw_weight_decay,
+        betas=(cfg.adamw_beta1, cfg.adamw_beta2),
+        eps=cfg.adamw_eps,
+        fused=cfg.adamw_fused,
+    )
+
+  elif cfg.optim == "muonDP":
+    from optim.muon import MuonDP
+    from optim.muon import split_params_muon_adam
+    muon_params, adam_params = split_params_muon_adam(model)  
+    optimizers['muon'] = MuonDP(
+        muon_params,
+        lr=cfg.muon_lr,
+        weight_decay=cfg.muon_weight_decay,
+        beta=cfg.muon_beta,
+        nesterov=cfg.muon_nesterov,
+        ns_steps=cfg.muon_ns_steps,
+        ns_eps=cfg.muon_ns_eps
+    )
+    optimizers['adamw'] = torch.optim.AdamW(
+        adam_params,
+        lr=cfg.adamw_lr,
+        weight_decay=cfg.adamw_weight_decay,
+        betas=(cfg.adamw_beta1, cfg.adamw_beta2),
+        eps=cfg.adamw_eps,
+        fused=cfg.adamw_fused,
+    )
+
   else:
     raise NotImplementedError(f"Not implemented optim: {cfg.optim}.")
 
-  return optimizer
+  return optimizers
 
 
 def initialize_scheduler(optimizer, cfg):

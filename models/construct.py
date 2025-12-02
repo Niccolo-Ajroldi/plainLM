@@ -45,7 +45,7 @@ def construct_model(cfg):
   return model, model_cfg
 
 
-def get_param_groups(model, cfg):
+def get_param_groups(model, weight_decay):
   """
   Create param groups for a Transformer model.
   Bias and normalization layers are excluded from weight decay.
@@ -80,13 +80,58 @@ def get_param_groups(model, cfg):
     ),
     dict(
       params=other_params,
-      weight_decay=cfg.weight_decay,
+      weight_decay=weight_decay,
     ),
   ]
 
   # # sanity check
-  # print("bias_param_names:\n\t" + "\n\t".join(bias_param_names))
-  # print("norm_param_names:\n\t" + "\n\t".join(norm_param_names))
+  # print("norm:\n\t" + "\n\t".join(norm))
+  # print("bias:\n\t" + "\n\t".join(bias))
+  # print("embedlm:\n\t" + "\n\t".join(embedlm))
   # print("other_param_names:\n\t" + "\n\t".join(other_param_names))
 
   return param_groups
+
+
+# def get_param_groups(model, weight_decay):
+#   """
+#   Create param groups for a Transformer model.
+#   Bias and normalization layers are excluded from weight decay.
+#   """
+
+#   # filter out parameters that do not require grad
+#   named_param_dict = {n: p for n, p in model.named_parameters() if p.requires_grad}
+#   names = named_param_dict.keys()
+
+#   # special param names
+#   norm = [n for n in names if "norm" in n]
+#   bias = [n for n in names if "bias" in n and n not in norm]
+#   embedlm = [n for n in names if ("embed" in n or "lm_head" in n) and n not in norm and n not in bias]
+
+#   # special params
+#   special_param_names = norm + bias + embedlm
+#   special_params = [p for n, p in named_param_dict.items() if n in special_param_names]
+  
+#   # all the ohers params
+#   other_param_names = [n for n in names if n not in special_param_names]
+#   other_params = [p for n, p in named_param_dict.items() if n in other_param_names]
+
+#   # assemble param grosups
+#   param_groups = [
+#     dict(
+#       params=special_params,
+#       weight_decay=0.0,
+#     ),
+#     dict(
+#       params=other_params,
+#       weight_decay=weight_decay,
+#     ),
+#   ]
+
+#   # # sanity check
+#   # print("norm:\n\t" + "\n\t".join(norm))
+#   # print("bias:\n\t" + "\n\t".join(bias))
+#   # print("embedlm:\n\t" + "\n\t".join(embedlm))
+#   # print("other_param_names:\n\t" + "\n\t".join(other_param_names))
+
+#   return param_groups

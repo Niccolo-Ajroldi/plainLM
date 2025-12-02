@@ -16,7 +16,7 @@ cd ~/plainLM
 source .venv/bin/activate
 
 # Hyperparmeters are specified in a YAML configuration file
-config=config/models/8M.yaml
+config=config/models/123M.yaml
 
 # SLURM job arrays range from 1 to n
 job_idx=$((SLURM_ARRAY_TASK_ID - 1))

@@ -24,8 +24,8 @@ def rmsnorm(d):
 
 
 def block_params(d):
-  return attn(d) + mlp(d) + 2 * rmsnorm(d)
-  # return attn(d) + glu(d) + 2*rmsnorm(d)
+  # return attn(d) + mlp(d) + 2 * rmsnorm(d)
+  return attn(d) + glu(d) + 2*rmsnorm(d)
 
 
 def tot_params(n_layers, d, vocab_size, weight_tying=True):
@@ -35,8 +35,8 @@ def tot_params(n_layers, d, vocab_size, weight_tying=True):
   return nparams
 
 
-d = 1536
-n_layers = 24
-vocab_size = 50280
-n_params = tot_params(n_layers, d, vocab_size, weight_tying=False)
+d = 512
+n_layers = 6
+vocab_size = 50277
+n_params = tot_params(n_layers, d, vocab_size, weight_tying=True)
 print(f"{int(n_params):_}")

@@ -1,6 +1,3 @@
-##
-## Config file to train a 124M-parameter transformer on 10B tokens.
-##
 
 deterministic: False
 seed: 1996
@@ -14,8 +11,8 @@ num_workers: 4
 
 eval: True
 validset_path: "/home/hk-project-p0023364/hgf_omt7140/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
-valid_tokens: 1000000  # 1M
-eval_every_steps: 100
+valid_tokens: 2000000  # ~2000 samples
+eval_every_steps: 3100
 
 # 123M (84_953_856 non-embedding)
 model: 'transformer'
@@ -32,7 +29,7 @@ torch_compile: True
 allow_tf32: True
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
-steps_budget: 28000
+steps_budget: 3100
 
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
@@ -58,16 +55,16 @@ lr_start: 0.0
 lr_end: 0.0
 lr_end_pct: null
 
-log_every_steps: 1 # testing
-print_progress: True # testing
+log_every_steps: 50
+print_progress: True
 
-use_wandb: False
-wandb_project: null
-wandb_dir: null
-wandb_run_name: null
+use_wandb: True
+wandb_project: 'optsearch'
+wandb_dir: '~/exp/optsearch/wandb'
+wandb_run_name: '123Mspeedtest'
 
-exp_name: 'nld_baseline_01'
-out_dir: '/fast/atatjer/scalinglawsquantization/checkpoints'
+exp_name: '123Mspeedtest'
+out_dir: '~/exp/optsearch'
 over_write: True
 
 resume: False

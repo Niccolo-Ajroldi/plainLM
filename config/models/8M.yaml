@@ -1,6 +1,4 @@
 ##
-## Config file to train a 124M-parameter transformer on 10B tokens.
-##
 
 deterministic: False
 seed: 1996
@@ -15,7 +13,7 @@ num_workers: 4
 eval: True
 validset_path: "/home/hk-project-p0023364/hgf_omt7140/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
 valid_tokens: 2000000  # ~2000 samples
-eval_every_steps: 4500
+eval_every_steps: 2000
 
 # 8M (1_574_528 non-embedding)
 model: 'transformer'
@@ -32,7 +30,7 @@ torch_compile: True
 allow_tf32: True
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
-steps_budget: 4500 # assuming bsz=256: tot 10_485_760_000 tokens (~10B)
+steps_budget: 2000
 
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size

@@ -90,7 +90,7 @@ class StatefulDistributedSampler(DistributedSampler):
     self.batch_size = batch_size
     self.total_size = len(dataset) - (len(dataset) % self.num_replicas)
     self.num_samples = self.total_size // self.num_replicas
-    print(f"rank: {self.rank}: sampler created, start_iter: {self.start_iter}")
+    print(f"[RANK {self.rank}] sampler created, start_iter: {self.start_iter}")
 
   def __iter__(self):
     # partition data into num_replicas and optionally shuffle within a rank

@@ -5,7 +5,6 @@ from torch import distributed as dist
 from torch.nn import CrossEntropyLoss
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from models import get_param_groups
 from optim import intialize_optimizer, initialize_scheduler
 
 
@@ -14,7 +13,7 @@ def _move_to_device(batch, seq_len, device):
   inputs = batch["input_ids"][:, :seq_len]
   targets = batch["input_ids"][:, 1 : (seq_len + 1)]
 
-  if "cuda" in device:
+  if device.type == 'cuda':
     # pin arrays allows to move them to GPU asynchronously (non_blocking=True)
     inputs = inputs.pin_memory().to(device, non_blocking=True)
     targets = targets.pin_memory().to(device, non_blocking=True)
@@ -26,7 +25,7 @@ def _move_to_device(batch, seq_len, device):
 
 class TorchEngine(torch.nn.Module):
   """
-  A module containing model, optimizer, scheduler, grad scaler.
+  A module containing model, optimizer, scheduler.
   Wraps together a training step. Takes care of grad accumulation.
   """
 
@@ -42,7 +41,11 @@ class TorchEngine(torch.nn.Module):
     self.dtype = cfg.dtype
     self.intra_doc_masking = getattr(cfg, "intra_doc_masking", False)
 
+    device = torch.device(device)
     self.device = device
+
+    if self.dtype == "float16":
+      raise NotImplementedError("Gradient scaler not supported, please use bf16.")
 
     # Load model state dict
     if cfg.resume:
@@ -60,26 +63,26 @@ class TorchEngine(torch.nn.Module):
       self.model = torch.compile(self.model)
 
     # AMP
-    device_type = "cuda" if "cuda" in device else "cpu"
-    ptdtype = {"float32": torch.float32, "bfloat16": torch.bfloat16, "float16": torch.float16}[
-      self.dtype
-    ]
+    ptdtype = {"float32": torch.float32, "bfloat16": torch.bfloat16}[self.dtype]
     self.ctx = (
       nullcontext()
-      if device_type == "cpu"
-      else torch.amp.autocast(device_type=device_type, dtype=ptdtype)
+      if device.type == "cpu"
+      else torch.amp.autocast(device_type=device.type, dtype=ptdtype)
     )
-
-    # Grad scaler if training in fp16, if enabled=False, scaler is a no-op
-    self.scaler = torch.amp.GradScaler(enabled=(self.dtype == "float16"))
 
     # Loss
     self.criterion = CrossEntropyLoss()
 
-    # If we are running with NOS, we define the optimizer in main.
+    # If we are running with NOS, we define the optimizers in main.
     if hasattr(cfg, 'optim'):
-      self.optimizer = intialize_optimizer(model.parameters(), cfg)
-      self.scheduler = initialize_scheduler(self.optimizer, cfg)
+      # We might have multiple optimizers
+      self.optimizers = intialize_optimizer(model, cfg)
+      
+      # Schedulers: one per optim (same tho)
+      self.schedulers = {}
+      for name, optim in self.optimizers.items():
+        self.schedulers[name] = initialize_scheduler(optim, cfg)
+
 
   def step(self, batch):
     """Wraps a fwd pass, bwd pass, and optimization step."""
@@ -107,27 +110,24 @@ class TorchEngine(torch.nn.Module):
     if torch.isnan(loss_val):
       raise ValueError("Train loss is nan")
 
-    # backward pass, with gradient scaling if training in fp16
-    self.scaler.scale(loss).backward()
+    # backward pass
+    loss.backward()
 
     # step after accumulation
     if self.accumulated_samples == self.accumulation_steps:
       self.accumulated_samples = 0
 
       if self.grad_clip:
-        self.scaler.unscale_(self.optimizer)
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
 
-      # step the optimizer, step the scaler if training in fp16
-      self.scaler.step(self.optimizer)
-      self.scaler.update()
+      # step the optimizers, flush the grads
+      for n, optim in self.optimizers.items():
+        optim.step()
+        optim.zero_grad(set_to_none=True)
 
-      # flush the gradients
-      self.optimizer.zero_grad(set_to_none=True)
-
-      # step the scheduler
-      if self.scheduler:
-        self.scheduler.step()
+      # step the schedulers
+      for scheduler in self.schedulers.values():
+        scheduler.step()
 
     return loss_val
 
@@ -159,10 +159,8 @@ class TorchEngine(torch.nn.Module):
       num_batches_tensor = torch.tensor([num_batches], device=self.device, dtype=torch.int)
       dist.all_reduce(total_loss_tensor, op=dist.ReduceOp.SUM)
       dist.all_reduce(num_batches_tensor, op=dist.ReduceOp.SUM)
-      total_loss = total_loss_tensor.item() / dist.get_world_size()
-      num_batches = (
-        num_batches_tensor.item() // dist.get_world_size()
-      )  # superflous if drop_last=True in dataloader
+      total_loss = total_loss_tensor.item()
+      num_batches = num_batches_tensor.item()
 
     # calculate average loss
     avg_loss = total_loss / num_batches

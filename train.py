@@ -81,7 +81,7 @@ def main(_):
       metrics["step"].append(step)
       metrics["micro_step"].append(micro_step)
       metrics["tokens"].append(step * cfg.seq_len * cfg.micro_batch_size * world_size)
-      metrics["lr"].append(engine.optimizer.param_groups[0]["lr"])
+      # metrics["lr"].append(engine.optimizer.param_groups[0]["lr"])
       metrics["train/loss"].append(train_loss.item())
       utils.log(cfg, metrics)
 
