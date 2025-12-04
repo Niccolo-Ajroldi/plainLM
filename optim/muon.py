@@ -53,6 +53,37 @@ def zeropower_via_newtonschulz5(G, steps=NS_STEPSS, eps=NS_EPS):
   return X
 
 
+@torch.compile()
+@torch.no_grad()
+def muon_update(g, m, beta, nesterov, ns_steps, ns_eps):
+  """Updates momentum ``m`` in-place and returns Muon update."""
+  m.mul_(beta).add_(g, alpha=1 - beta)
+
+  if nesterov:
+    g = g.add(m, alpha=beta)
+  else:
+    g = m
+
+  g = g.reshape(g.size(0), -1)  # flatten trailing dims on 3D, 4D params
+  g = zeropower_via_newtonschulz5(g, steps=ns_steps, eps=ns_eps)
+  g = g.view(m.shape)  # restore original shape
+
+  return g
+  
+
+def _adjust_lr_to_match_adam(lr, param_shape):
+  # https://arxiv.org/pdf/2502.16982
+  A, B = param_shape[:2]
+  return lr * 0.2 * (max(A, B) ** 0.5)
+
+
+def _adjust_lr_spectral_norm(lr, param_shape):
+  # Adjust from spectral norm 1 to RMS operator norm 1
+  # https://arxiv.org/abs/2310.17813
+  fan_out, fan_in = param_shape[:2]
+  return lr * max(1.0, (fan_out / fan_in) ** 0.5)
+
+
 def _param_to_complexity(p: torch.Tensor) -> int:
   """Compute NS complexity on p.grad."""
   # Shape after flatting potential trailing dims (3D, 4D)
@@ -78,6 +109,7 @@ class MuonBase(torch.optim.Optimizer, ABC):
     nesterov=True,
     ns_steps=NS_STEPSS,
     ns_eps=NS_EPS,
+    adjust_lr=None,
   ):
     if not 0.0 <= lr:
       raise ValueError(f'Invalid learning rate: {lr}')
@@ -91,6 +123,8 @@ class MuonBase(torch.optim.Optimizer, ABC):
       raise ValueError(f'Invalid ns_steps parameter: {ns_steps}')
     if not 0.0 <= ns_eps:
       raise ValueError(f'Invalid ns_eps parameter: {ns_eps}')
+    if not adjust_lr in [None, 'spectral_norm', 'match_adam']:
+      raise ValueError(f'Invalid adjust_lr parameter: {adjust_lr}')
 
     defaults = dict(
       lr = lr,
@@ -101,6 +135,13 @@ class MuonBase(torch.optim.Optimizer, ABC):
       ns_eps = ns_eps,
     )
     super().__init__(params, defaults)
+
+    if adjust_lr is None:
+      self._adjust_lr = lambda lr, _: lr
+    elif adjust_lr == 'spectral_norm':
+      self._adjust_lr = _adjust_lr_spectral_norm
+    elif adjust_lr == 'match_adam':
+      self._adjust_lr = _adjust_lr_to_match_adam
 
   @abstractmethod
   @torch.no_grad()
@@ -115,7 +156,9 @@ class MuonVanilla(MuonBase):
   """
   def __init__(self, params, **kwargs):
     super().__init__(params, **kwargs)
-  
+
+
+  @torch.compile()
   @torch.no_grad()
   def step(self, closure=None):
     loss = None
@@ -139,20 +182,12 @@ class MuonVanilla(MuonBase):
 
         if len(state) == 0:
           state['m'] = torch.zeros_like(p)
-        state['m'].mul_(beta).add_(g, alpha=1 - beta)
 
-        if nesterov:
-          g = g.add(state['m'], alpha=beta)
-        else:
-          g = state['m']
-        g = g.reshape(g.size(0), -1)  # flatten trailing dims (3D, 4D)
-        g = zeropower_via_newtonschulz5(g, steps=ns_steps, eps=ns_eps)
-        g = g.view(p.shape)  # restore original shape
-        # Adjust from spectral norm 1 to RMS operator norm 1 https://arxiv.org/abs/2310.17813
-        g *= max(1.0, p.size(-2) / p.size(-1)) ** 0.5
+        g = muon_update(g, state['m'], beta=beta, nesterov=nesterov, ns_steps=ns_steps, ns_eps=ns_eps)
 
-        p.mul_(1 - lr * wd)
-        p.add_(g, alpha=-lr)
+        adjusted_lr = self._adjust_lr(lr, p.shape) # optionally adjust lr
+        p.mul_(1 - lr * wd) # weigth decay
+        p.add_(g, alpha=-adjusted_lr)
 
     return loss
 
@@ -195,6 +230,7 @@ class MuonDP(MuonBase):
       with torch.enable_grad():
         loss = closure()
 
+    allgater_handles = []
     for group in self.param_groups:
       lr = group['lr']
       wd = group['weight_decay']
@@ -203,7 +239,6 @@ class MuonDP(MuonBase):
       ns_steps = group['ns_steps']
       ns_eps = group['ns_eps']
       params = group['params']
-      handles = []
 
       # Pad params so each all-gather block is of size WORLD_SIZE.
       # list concat keeps param refs (not copies), so all_gather updates model params directly.      
@@ -222,30 +257,23 @@ class MuonDP(MuonBase):
 
           if len(state) == 0:
             state['m'] = torch.zeros_like(p)
-          state['m'].mul_(beta).add_(g, alpha=1 - beta)
 
-          if nesterov:
-            g = g.add(state['m'], alpha=beta)
-          else:
-            g = state['m']
-          g = g.reshape(g.size(0), -1)  # flatten trailing dims on 3D, 4D params
-          g = zeropower_via_newtonschulz5(g, steps=ns_steps, eps=ns_eps)
-          g = g.view(p.shape)  # restore original shape on 3D, 4D params
-          g *= max(1.0, p.size(-2) / p.size(-1)) ** 0.5 # Adjust from spectral norm 1 to RMS operator norm 1 https://arxiv.org/abs/2310.17813
+          g = muon_update(g, state['m'], beta=beta, nesterov=nesterov, ns_steps=ns_steps, ns_eps=ns_eps)
 
+          adjusted_lr = self._adjust_lr(lr, p.shape) # optionally adjust lr
           p.mul_(1 - lr * wd)
-          p.add_(g, alpha=-lr)
+          p.add_(g, alpha=-adjusted_lr)
         
         # AllGather current block of params (including padded entries)
         handle = dist.all_gather(
             params_pad[block_start:block_start + WORLD_SIZE], 
             params_pad[block_start + RANK],
             async_op=True)
-        handles.append(handle)
+        allgater_handles.append(handle)
 
-      # Sync point
-      for handle in handles:
-        handle.wait()
+    # Sync point
+    for handle in allgater_handles:
+      handle.wait()
 
     return loss
 

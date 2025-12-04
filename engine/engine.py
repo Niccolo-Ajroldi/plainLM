@@ -6,6 +6,10 @@ from torch.nn import CrossEntropyLoss
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 from optim import intialize_optimizer, initialize_scheduler
+from checkpoint_utils import load_checkpoint
+
+MAX_ALLOWED_LOSS = 5.0
+MIN_STEPS_BEFORE_CHECK = 5_000
 
 
 def _move_to_device(batch, seq_len, device):
@@ -29,9 +33,10 @@ class TorchEngine(torch.nn.Module):
   Wraps together a training step. Takes care of grad accumulation.
   """
 
-  def __init__(self, model, cfg, device, local_rank, ckpt):
+  def __init__(self, model, cfg, device):
     super().__init__()
 
+    self.steps = 0
     self.micro_steps = 0
     self.accumulated_samples = 0
 
@@ -40,6 +45,7 @@ class TorchEngine(torch.nn.Module):
     self.grad_clip = cfg.grad_clip
     self.dtype = cfg.dtype
     self.intra_doc_masking = getattr(cfg, "intra_doc_masking", False)
+    self.abort_on_bad_loss = getattr(cfg, "abort_on_bad_loss", False)
 
     device = torch.device(device)
     self.device = device
@@ -48,14 +54,17 @@ class TorchEngine(torch.nn.Module):
       raise NotImplementedError("Gradient scaler not supported, please use bf16.")
 
     # Load model state dict
+    ckpt = None
     if cfg.resume:
-      model.load_state_dict(ckpt["state_dict"])
+      ckpt = load_checkpoint(cfg)
+      model.load_state_dict(ckpt["model_state"])
+      self.steps = ckpt["step"]
       self.micro_steps = ckpt["step"] * cfg.grad_accumulation_steps
 
     # Move model to device and to DDP
     self.model = model.to(device)
-    if torch.distributed.is_initialized():
-      self.model = DDP(self.model, device_ids=[local_rank])
+    if dist.is_initialized():
+      self.model = DDP(self.model, device_ids=[device.index])
 
     # Compile
     if cfg.torch_compile:
@@ -82,6 +91,16 @@ class TorchEngine(torch.nn.Module):
       self.schedulers = {}
       for name, optim in self.optimizers.items():
         self.schedulers[name] = initialize_scheduler(optim, cfg)
+      
+    if cfg.resume:
+      rank = dist.get_rank() if dist.is_initialized() else 0
+      for name, optim in self.optimizers.items():
+          if name == "zero1adamw":
+              optim.load_state_dict(ckpt[f"optimizer_{name}_rank{rank}_state"])
+          else:
+              optim.load_state_dict(ckpt[f"optimizer_{name}_state"])          
+      for name, scheduler in self.schedulers.items():
+          scheduler.load_state_dict(ckpt[f"scheduler_{name}_state"])
 
 
   def step(self, batch):
@@ -95,7 +114,7 @@ class TorchEngine(torch.nn.Module):
     inputs, targets = _move_to_device(batch, self.seq_len, self.device)
 
     # sync (reduce) gradients at the last accumulation step
-    if torch.distributed.is_initialized():
+    if dist.is_initialized():
       self.model.require_backward_grad_sync = self.accumulated_samples == self.accumulation_steps
 
     # forward pass with autocasting
@@ -109,6 +128,8 @@ class TorchEngine(torch.nn.Module):
     loss_val = loss.detach() * self.accumulation_steps
     if torch.isnan(loss_val):
       raise ValueError("Train loss is nan")
+    if self.abort_on_bad_loss and loss_val > MAX_ALLOWED_LOSS and self.steps  > MIN_STEPS_BEFORE_CHECK:
+      raise ValueError(f"Train loss {loss_val} exceeds {MAX_ALLOWED_LOSS} at step {self.steps}.")
 
     # backward pass
     loss.backward()
@@ -116,6 +137,7 @@ class TorchEngine(torch.nn.Module):
     # step after accumulation
     if self.accumulated_samples == self.accumulation_steps:
       self.accumulated_samples = 0
+      self.steps +=1
 
       if self.grad_clip:
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)

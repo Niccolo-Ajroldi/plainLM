@@ -23,7 +23,6 @@ def intialize_optimizer(model, cfg):
       fused=getattr(cfg, "fused_optim", True),
       eps=getattr(cfg, "eps", 1e-8),
     )
-    
 
   elif cfg.optim == "sgd":
     param_groups = get_param_groups(model, cfg.weight_decay)
@@ -47,44 +46,46 @@ def intialize_optimizer(model, cfg):
       eps=getattr(cfg, "eps", 1e-8),
     )
 
-  elif cfg.optim == "muonVanilla":
+  elif cfg.optim == "muon_vanilla":
     from optim.muon import MuonVanilla
     from optim.muon import split_params_muon_adam
     muon_params, adam_params = split_params_muon_adam(model)  
     optimizers['muon'] = MuonVanilla(
         muon_params,
-        lr=cfg.muon_lr,
+        lr=cfg.lr,
         weight_decay=cfg.muon_weight_decay,
         beta=cfg.muon_beta,
         nesterov=cfg.muon_nesterov,
         ns_steps=cfg.muon_ns_steps,
-        ns_eps=cfg.muon_ns_eps
+        ns_eps=cfg.muon_ns_eps,
+        adjust_lr=cfg.adjust_lr,
     )
     optimizers['adamw'] = torch.optim.AdamW(
         adam_params,
-        lr=cfg.adamw_lr,
+        lr=cfg.lr,
         weight_decay=cfg.adamw_weight_decay,
         betas=(cfg.adamw_beta1, cfg.adamw_beta2),
         eps=cfg.adamw_eps,
         fused=cfg.adamw_fused,
     )
 
-  elif cfg.optim == "muonDP":
+  elif cfg.optim == "muon_dp":
     from optim.muon import MuonDP
     from optim.muon import split_params_muon_adam
     muon_params, adam_params = split_params_muon_adam(model)  
     optimizers['muon'] = MuonDP(
         muon_params,
-        lr=cfg.muon_lr,
+        lr=cfg.lr,
         weight_decay=cfg.muon_weight_decay,
         beta=cfg.muon_beta,
         nesterov=cfg.muon_nesterov,
         ns_steps=cfg.muon_ns_steps,
-        ns_eps=cfg.muon_ns_eps
+        ns_eps=cfg.muon_ns_eps,
+        adjust_lr=cfg.muon_adjust_lr,
     )
     optimizers['adamw'] = torch.optim.AdamW(
         adam_params,
-        lr=cfg.adamw_lr,
+        lr=cfg.lr,
         weight_decay=cfg.adamw_weight_decay,
         betas=(cfg.adamw_beta1, cfg.adamw_beta2),
         eps=cfg.adamw_eps,

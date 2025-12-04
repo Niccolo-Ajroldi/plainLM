@@ -18,6 +18,10 @@ env/
 *.csv
 *.json
 
+# Ignore ckpts
+*.pth
+~/
+
 # Ignore any other temporary or sensitive files
 *.tmp
 *.bak

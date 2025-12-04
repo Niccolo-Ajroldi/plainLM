@@ -5,7 +5,7 @@ from collections import defaultdict
 from absl import app, flags
 
 import utils
-from checkpoint_utils import maybe_load_checkpoint, save_checkpoint
+from checkpoint_utils import save_checkpoint
 from data import get_dataloaders
 from engine import TorchEngine
 from models import construct_model
@@ -22,7 +22,7 @@ def main(_):
   CFG_PATH, JOB_IDX = FLAGS.config, FLAGS.job_idx
   cfg, _ = utils.load_config(CFG_PATH, JOB_IDX)
 
-  local_rank, world_size, device, master_process = pytorch_setup(cfg)
+  rank, world_size, device, master_process = pytorch_setup(cfg)
 
   if master_process:
     utils.maybe_make_dir(cfg, JOB_IDX)
@@ -31,9 +31,6 @@ def main(_):
     utils.init_wandb(cfg)
     utils.log_job_info(FLAGS)
 
-  # Load checkpoint
-  ckpt = maybe_load_checkpoint(cfg)
-
   # Dataset
   trainloader, validloader = get_dataloaders(cfg)
 
@@ -41,7 +38,7 @@ def main(_):
   model, _ = construct_model(cfg)
 
   # Engine
-  engine = TorchEngine(model, cfg, device, local_rank, ckpt)
+  engine = TorchEngine(model, cfg, device)
 
   # If we are just cooling down, we set budget = resume + cooldown
   steps_budget = cfg.steps_budget if cfg.scheduler != "linear_cooldown" else cfg.resume_step + engine.scheduler.cooldown_steps
@@ -68,36 +65,36 @@ def main(_):
 
     # Train
     train_loss = engine.step(micro_batch)
-
+    
     # Eval
     valid_loss = None
     if cfg.eval and step % cfg.eval_every_steps == 0 and is_step:
       print_master("Evaluating on validation set")
       valid_loss = engine.eval(validloader)
-      metrics["valid/loss"].append(valid_loss)
+    metrics["valid/loss"].append(valid_loss)
 
     # Log
     if master_process and step % cfg.log_every_steps == 0 and is_step:
       metrics["step"].append(step)
       metrics["micro_step"].append(micro_step)
       metrics["tokens"].append(step * cfg.seq_len * cfg.micro_batch_size * world_size)
-      # metrics["lr"].append(engine.optimizer.param_groups[0]["lr"])
       metrics["train/loss"].append(train_loss.item())
+      for n, optim in engine.optimizers.items():
+        metrics[f"{n}_lr"].append(optim.param_groups[0]["lr"])
       utils.log(cfg, metrics)
 
     # Checkpoint
     if (
-      master_process
-      and cfg.save_intermediate_checkpoints
+      cfg.save_intermediate_checkpoints
       and step % cfg.save_every_steps == 0
       and is_step
     ):
-      save_checkpoint(step, model, engine, cfg, metrics, JOB_IDX)
+      save_checkpoint(step, model, engine, cfg, metrics, rank, JOB_IDX)
 
   # End of training: log and save checkpoint
   print_master("=== Training Completed! ===")
-  if master_process and cfg.save_last_checkpoint:
-    save_checkpoint(step, model, engine, cfg, metrics, JOB_IDX)
+  if cfg.save_last_checkpoint:
+    save_checkpoint(step, model, engine, cfg, metrics, rank, JOB_IDX)
 
   # DDP slaughtering
   destroy_ddp()

@@ -67,7 +67,7 @@ class ZeRO1AdamW(torch.optim.Optimizer):
                 self.state[p] = dict(step=0, exp_avg=exp_avg, exp_avg_sq=exp_avg_sq)
 
 
-    @torch.compile
+    @torch.compile()
     @torch.no_grad()
     def step(self):
         rank = self.rank
