@@ -87,3 +87,50 @@ def get_param_groups(model, weight_decay):
   # print("other_param_names:\n\t" + "\n\t".join(other_param_names))
 
   return param_groups
+
+
+# def get_param_groups(model, cfg):
+#   """
+#   Create param groups for a Transformer model.
+#   Bias and normalization layers are excluded from weight decay.
+#   """
+
+#   # filter out parameters that do not require grad
+#   named_param_dict = {n: p for n, p in model.named_parameters() if p.requires_grad}
+#   param_names = named_param_dict.keys()
+
+#   # normalization layers
+#   norm_param_names = [n for n in param_names if "norm" in n]
+#   norm_params = [p for n, p in named_param_dict.items() if n in norm_param_names]
+
+#   # bias
+#   bias_param_names = [n for n in param_names if "bias" in n and n not in norm_param_names]
+#   bias_params = [p for n, p in named_param_dict.items() if n in bias_param_names]
+
+#   # all the ohers params
+#   norm_and_bias_names = norm_param_names + bias_param_names
+#   other_param_names = [n for n in param_names if n not in norm_and_bias_names]
+#   other_params = [p for n, p in named_param_dict.items() if n in other_param_names]
+
+#   # assemble param groups
+#   param_groups = [
+#     dict(
+#       params=norm_params,
+#       weight_decay=0.0,
+#     ),
+#     dict(
+#       params=bias_params,
+#       weight_decay=0.0,
+#     ),
+#     dict(
+#       params=other_params,
+#       weight_decay=cfg.weight_decay,
+#     ),
+#   ]
+
+#   # # sanity check
+#   # print("bias_param_names:\n\t" + "\n\t".join(bias_param_names))
+#   # print("norm_param_names:\n\t" + "\n\t".join(norm_param_names))
+#   # print("other_param_names:\n\t" + "\n\t".join(other_param_names))
+
+#   return param_groups

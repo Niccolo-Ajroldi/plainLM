@@ -1,0 +1,88 @@
+##
+
+deterministic: False
+seed: 1996
+
+trainset_path: "/home/hk-project-p0023364/hgf_omt7140/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train"
+vocab_size: 50280 # tokenizer len: 50277, round up to shard
+seq_len: 1024
+sampler: 'stateful_random'
+sampler_seed: 1996
+num_workers: 4
+
+eval: True
+validset_path: "/home/hk-project-p0023364/hgf_omt7140/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
+valid_tokens: 2000000  # ~2000 samples
+eval_every_steps: 5000  # 2% of steps -> 50 evals 
+
+# 1B
+model: 'transformer'
+d_model: 1792
+mlp_class: 'glu'
+expand: '8/3'
+n_layers: 24
+n_heads: 28 # d_head = 64
+rms_norm: True
+tie_embeddings: True
+torch_compile: True
+
+# Allow TF32 matmul for speedups on Ampere+ GPUs
+allow_tf32: True
+
+# note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
+steps_budget: 250000
+
+# note: this is micro batch size if grad_accumulation_steps>1
+# note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
+micro_batch_size: 48
+grad_accumulation_steps: 1
+
+# note: choose between {float32, float16, bfloat16}
+# note: float16 data type will automatically use a GradScaler
+dtype: 'bfloat16'
+
+# Early stopping on a bad loss
+abort_on_bad_loss: True
+
+# --------------------------------------------------------
+
+## ADAMW
+optim: 'zero1adamw'
+lr: [4.e-4, 8.e-4, 1.6e-3, 3.2e-3, 6.4e-3]
+weight_decay: 0.1
+adamc_wd: True
+beta1: 0.9
+beta2: 0.95
+grad_clip: 1.0
+fused_optim: True
+
+# --------------------------------------------------------
+
+scheduler: 'wsd'
+warmup_steps: 0.02 # 2% -> 5k steps
+cooldown_steps: 0.2 # 20% -> 50k steps
+lr_start: 0.0
+lr_end: 0.0
+lr_end_pct: null
+
+# this is also the wandb logging frequency
+log_every_steps: 1 # 0.004% -> 25000 logs
+print_progress: True
+
+use_wandb: True
+wandb_project: 'optsearch'
+wandb_dir: '~/exp/optsearch/wandb'
+wandb_run_name: 'oneB_adamw_sweep_01'
+
+exp_name: 'oneB_adamw_sweep_01'
+# out_dir: '~/exp/optsearch'
+out_dir: '/home/hk-project-p0023364/hgf_omt7140/exp/optsearch'
+over_write: True
+
+resume: False
+resume_step: null
+resume_exp_name: null
+
+save_last_checkpoint: True
+save_intermediate_checkpoints: True
+save_every_steps: 5000 # 2% -> 50 save

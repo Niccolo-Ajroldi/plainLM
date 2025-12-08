@@ -105,13 +105,7 @@ def load_checkpoint(cfg):
   with open(os.path.join(ckpt_dir, "step.txt"), "r") as f:
       out['step'] = int(f.read().strip())
 
-  # model
-  out["model_state"] = torch.load(
-      os.path.join(ckpt_dir, "model_state.pth"),
-      map_location="cpu",
-  )
-
-  # schedulers + optimizers
+  # load model, optimizers, schedulers
   for fn in os.listdir(ckpt_dir):
       if not fn.endswith(".pth"):
           continue

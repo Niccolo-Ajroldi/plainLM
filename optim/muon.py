@@ -6,6 +6,7 @@ import os
 import torch
 import torch.distributed as dist
 from abc import ABC, abstractmethod
+from utils import print_master
 
 
 # Default values for Newton-Schulz
@@ -243,7 +244,7 @@ class MuonDP(MuonBase):
       # Pad params so each all-gather block is of size WORLD_SIZE.
       # list concat keeps param refs (not copies), so all_gather updates model params directly.      
       pad = (WORLD_SIZE - len(params) % WORLD_SIZE) % WORLD_SIZE
-      params_pad = params + [torch.empty_like(params[-1])] * pad
+      params_pad = params + [torch.empty_like(params[-1]) for _ in range(pad)]
 
       # Iterate over params in blocks of WORLD_SIZE
       for block_start in range(0, len(params), WORLD_SIZE):
@@ -305,8 +306,8 @@ def split_params_muon_adam(model):
       adam_params.append(p)
       adam_infos.append(f'{n} (ndim={p.ndim})')
 
-  print("Muon params:\n\t" + "\n\t".join(muon_infos))
-  print("Adam params:\n\t" + "\n\t".join(adam_infos))
+  print_master("Muon params:\n\t" + "\n\t".join(muon_infos))
+  print_master("Adam params:\n\t" + "\n\t".join(adam_infos))
   
   return muon_params, adam_params
 
@@ -334,8 +335,8 @@ def split_params_muon_adam(model):
 #             adam.append(p)
 #             adam_infos.append(f"{n} (ndim={p.ndim})")
 
-#     print("Muon params:\n\t" + "\n\t".join(muon_infos))
-#     print("Adam params:\n\t" + "\n\t".join(adam_infos))
+#     print_master("Muon params:\n\t" + "\n\t".join(muon_infos))
+#     print_master("Adam params:\n\t" + "\n\t".join(adam_infos))
 
 #     return [
 #         dict(params=muon, weight_decay=weight_decay),

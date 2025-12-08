@@ -72,6 +72,7 @@ def intialize_optimizer(model, cfg):
   elif cfg.optim == "muon_dp":
     from optim.muon import MuonDP
     from optim.muon import split_params_muon_adam
+    from optim.zero1adamw import ZeRO1AdamW
     muon_params, adam_params = split_params_muon_adam(model)  
     optimizers['muon'] = MuonDP(
         muon_params,
