@@ -1,0 +1,77 @@
+##
+
+deterministic: False
+seed: 1996
+
+trainset_path: "/home/hk-project-p0023364/hgf_omt7140/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train"
+vocab_size: 50280 # tokenizer len: 50277, round up to shard
+seq_len: 1024
+sampler: 'stateful_random'
+sampler_seed: 1996
+num_workers: 4
+
+eval: True
+validset_path: "/home/hk-project-p0023364/hgf_omt7140/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
+valid_tokens: 2000000  # ~2000 samples
+eval_every_steps: 2000
+
+# 8M (1_574_528 non-embedding)
+model: 'transformer'
+d_model: 128
+mlp_class: 'glu'
+expand: '8/3'
+n_layers: 6
+n_heads: 4
+rms_norm: True
+tie_embeddings: True
+torch_compile: True
+
+# Allow TF32 matmul for speedups on Ampere+ GPUs
+allow_tf32: True
+
+# note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
+steps_budget: 2000
+
+# note: this is micro batch size if grad_accumulation_steps>1
+# note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
+micro_batch_size: 48
+grad_accumulation_steps: 1
+
+# note: choose between {float32, float16, bfloat16}
+# note: float16 data type will automatically use a GradScaler
+dtype: 'bfloat16'
+
+optim: 'adamw'
+fused_optim: True
+lr: 0.001
+weight_decay: 0.1
+beta1: 0.9
+beta2: 0.95
+grad_clip: 1.0
+
+scheduler: 'wsd'
+warmup_steps: 0.02 # 2%
+cooldown_steps: 0.2 # 20%
+lr_start: 0.0
+lr_end: 0.0
+lr_end_pct: null
+
+log_every_steps: 50
+print_progress: True
+
+use_wandb: True
+wandb_project: 'optsearch'
+wandb_dir: '~/exp/optsearch/wandb'
+wandb_run_name: '8Mspeedtest'
+
+exp_name: '8Mspeedtest'
+out_dir: '~/exp/optsearch'
+over_write: True
+
+resume: False
+resume_step: null
+resume_exp_name: null
+
+save_last_checkpoint: False
+save_intermediate_checkpoints: False
+save_every_steps: null

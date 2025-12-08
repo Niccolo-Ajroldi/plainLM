@@ -91,6 +91,14 @@ def main(_):
     ):
       save_checkpoint(step, model, engine, cfg, metrics, rank, JOB_IDX)
 
+  # Eval at the end
+  if getattr(cfg, 'eval_when_finished', True):
+    print_master("Evaluating on validation set")
+    valid_loss = engine.eval(validloader)
+    metrics["valid/loss"].append(valid_loss)
+    if master_process:
+      utils.log(cfg, metrics)
+
   # End of training: log and save checkpoint
   print_master("=== Training Completed! ===")
   if cfg.save_last_checkpoint:

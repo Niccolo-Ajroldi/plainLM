@@ -1,12 +1,12 @@
 ##
-## Config file to train a 124M-parameter transformer on 10B tokens.
+## 8M model, 200BT, circa 5min
 ##
 
 deterministic: False
 seed: 1996
 
 trainset_path: "/home/hk-project-p0023364/hgf_omt7140/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train"
-vocab_size: 50277
+vocab_size: 50280 # tokenizer len: 50277, round up to shard
 seq_len: 1024
 sampler: 'stateful_random'
 sampler_seed: 1996
@@ -15,15 +15,16 @@ num_workers: 4
 eval: True
 validset_path: "/home/hk-project-p0023364/hgf_omt7140/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
 valid_tokens: 2000000  # ~2000 samples
-eval_every_steps: 2000
+eval_every_steps: 999999999  # no eval at train
+eval_when_finished: True  # evan at traininig completion
 
-# 18M (5_115_136 non-embedding)
+# 8M (1_574_528 non-embedding)
 model: 'transformer'
-d_model: 256
+d_model: 128
 mlp_class: 'glu'
 expand: '8/3'
 n_layers: 6
-n_heads: 8
+n_heads: 4
 rms_norm: True
 tie_embeddings: True
 torch_compile: True
@@ -32,11 +33,11 @@ torch_compile: True
 allow_tf32: True
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
-steps_budget: 2000
+steps_budget: 1250
 
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
-micro_batch_size: 56
+micro_batch_size: 48
 grad_accumulation_steps: 1
 
 # note: choose between {float32, float16, bfloat16}
@@ -58,17 +59,17 @@ lr_start: 0.0
 lr_end: 0.0
 lr_end_pct: null
 
-log_every_steps: 50
+log_every_steps: 1
 print_progress: True
 
-use_wandb: True
-wandb_project: 'optsearch'
-wandb_dir: '~/exp/optsearch/wandb'
-wandb_run_name: '18Mspeedtest'
+use_wandb: False
+wandb_project: null
+wandb_dir: null
+wandb_run_name: null
 
-exp_name: '18Mspeedtest'
-out_dir: '~/exp/optsearch'
-over_write: True
+exp_name: null
+out_dir: null
+over_write: False
 
 resume: False
 resume_step: null

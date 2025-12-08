@@ -3,7 +3,7 @@ deterministic: False
 seed: 1996
 
 trainset_path: "/home/hk-project-p0023364/hgf_omt7140/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/train"
-vocab_size: 50277
+vocab_size: 50280 # tokenizer len: 50277, round up to shard
 seq_len: 1024
 sampler: 'stateful_random'
 sampler_seed: 1996
@@ -11,8 +11,8 @@ num_workers: 4
 
 eval: True
 validset_path: "/home/hk-project-p0023364/hgf_omt7140/data/lm/fwedu/fwedu_sample_100B_tokenizer_GPTNeoX/tokenized_EleutherAI_gpt-neox-20b/ctx_2048/valid"
-valid_tokens: 2000000  # ~2000 samples
-eval_every_steps: 2300
+valid_tokens: 1000000  # 1M
+eval_every_steps: 100
 
 # 46M (20_453_888 non-embedding)
 model: 'transformer'
@@ -29,7 +29,7 @@ torch_compile: True
 allow_tf32: True
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
-steps_budget: 2300
+steps_budget: 20000
 
 # note: this is micro batch size if grad_accumulation_steps>1
 # note: with ddp, effective batch size = batch_size * grad_accumulation_steps * ddp_world_size
@@ -55,7 +55,7 @@ lr_start: 0.0
 lr_end: 0.0
 lr_end_pct: null
 
-log_every_steps: 50
+log_every_steps: 1
 print_progress: True
 
 use_wandb: True
