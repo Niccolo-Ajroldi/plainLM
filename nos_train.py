@@ -52,16 +52,13 @@ def train(
   cfg = cfg._replace(out_dir=pipeline_directory)
   cfg = cfg._replace(wandb_dir=pipeline_directory)
 
-  local_rank, world_size, device, master_process = pytorch_setup(cfg)
+  rank, world_size, device, master_process = pytorch_setup(cfg)
 
   if master_process:
     utils.maybe_make_dir(cfg)
 
   if cfg.use_wandb and master_process:
     utils.init_wandb(cfg)
-
-  # Load checkpoint
-  ckpt = maybe_load_checkpoint(cfg)
 
   # Dataset
   trainloader, validloader = get_dataloaders(cfg)
@@ -70,11 +67,10 @@ def train(
   model, _ = construct_model(cfg)
 
   # Engine
-  engine = TorchEngine(model, cfg, device, local_rank, ckpt)
+  engine = TorchEngine(model, cfg, device)
 
   # Optimizer is usually defined by engine, we define it here for ease of use with NOS
-  engine.optimizers = {}
-  engine.schedulers = {}
+  engine.optimizers, engine.schedulers = {}, {}
   engine.optimizers['nos'] = optimizer_cls(
     model.parameters(),
     lr=cfg.lr, 
@@ -93,7 +89,9 @@ def train(
   # Start the dataloader from the correct micro-batch
   step_start = cfg.resume_step if cfg.resume else 0
   micro_step_start = step_start * cfg.grad_accumulation_steps
-  print_master(f"Start Training from micro_step: {micro_step_start}/{micro_step_budget}")
+  print_master(
+    f"=== Start Training from step: {step_start}/{steps_budget}, micro_step: {micro_step_start}/{micro_step_budget} ===",
+  )
 
   # Bookkeeping
   metrics = defaultdict(list)
@@ -112,28 +110,32 @@ def train(
     if master_process and step % cfg.log_every_steps == 0 and is_step:
       metrics["step"].append(step)
       metrics["micro_step"].append(micro_step)
-      metrics["tokens"].append(step * cfg.seq_len * world_size)
-      metrics["lr"].append(engine.optimizer.param_groups[0]["lr"])
+      metrics["tokens"].append(step * cfg.seq_len * cfg.micro_batch_size * world_size)
       metrics["train/loss"].append(train_loss.item())
+      for n, optim in engine.optimizers.items():
+        metrics[f"{n}_lr"].append(optim.param_groups[0]["lr"])
       utils.log(cfg, metrics)
 
     # Checkpoint
-    if master_process and cfg.save_intermediate_checkpoints and step % cfg.save_every_steps == 0 and is_step:
-      save_checkpoint(step, model, engine, cfg, metrics)
-
-  # End of training: log and save checkpoint
-  print_master("Training Completed!")
-  if master_process and cfg.save_last_checkpoint:
-    save_checkpoint(step, model, engine, cfg, metrics)
+    if (
+      cfg.save_intermediate_checkpoints
+      and step % cfg.save_every_steps == 0
+      and is_step
+    ):
+      save_checkpoint(step, model, engine, cfg, metrics, rank)
 
   # Eval
-  valid_loss = None
-  if cfg.eval:
+  if getattr(cfg, 'eval_when_finished', True):
     print_master("Evaluating on validation set")
     valid_loss = engine.eval(validloader)
     if master_process:
-      metrics["valid/loss"] = valid_loss
+      metrics["valid/loss"] = valid_loss # no append here, eval at the end only
       utils.log(cfg, metrics)
+
+  # End of training: log and save checkpoint
+  print_master("=== Training Completed! ===")
+  if cfg.save_last_checkpoint:
+    save_checkpoint(step, model, engine, cfg, metrics, rank)
 
   # DDP slaughtering
   destroy_ddp()

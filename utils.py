@@ -53,17 +53,15 @@ def init_wandb(cfg):
 
 def log_job_info(FLAGS):
   """Logs info about cluster job."""
-  if FLAGS.job_cluster is not None and FLAGS.job_idx is not None:
-    print(f"JOB_CLUSER = {FLAGS.job_cluster}")
-    print(f"JOB_INDEX = {FLAGS.job_idx}")
-    print(f"JOB_ID = {FLAGS.job_cluster}.{FLAGS.job_idx}")
+  if FLAGS.job_cluster is None or FLAGS.job_idx is None:
+    return
+  print(f"JOB_CLUSER = {FLAGS.job_cluster}")
+  print(f"JOB_INDEX = {FLAGS.job_idx}")
+  print(f"JOB_ID = {FLAGS.job_cluster}.{FLAGS.job_idx}")
+  if wandb.run is not None:
     wandb.log({"JOB_CLUSTER": FLAGS.job_cluster})
     wandb.log({"JOB_INDEX": FLAGS.job_idx})
-    wandb.log(
-      {
-        "JOB_ID": f"{FLAGS.job_cluster}.{FLAGS.job_idx}",
-      },
-    )
+    wandb.log({"JOB_ID": f"{FLAGS.job_cluster}.{FLAGS.job_idx}",})
 
 
 def _matching_wandb_run_exists(cfg):
