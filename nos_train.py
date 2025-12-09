@@ -16,7 +16,7 @@ from collections import defaultdict
 import torch
 
 import utils
-from checkpoint_utils import maybe_load_checkpoint, save_checkpoint
+from checkpoint_utils import save_checkpoint
 from data import get_dataloaders
 from engine import TorchEngine
 from models import construct_model
@@ -24,8 +24,8 @@ from optim import initialize_scheduler
 from torch_utils import destroy_ddp, pytorch_setup
 from utils import print_master
 
-# Default config path for a 70M transformer model, TODO: pass it as arg?
-CFG_PATH = "config/opt_search/70M_10BT.yaml"
+CFG_PATH = "config/optsearch/workloads/8M_200BT.yaml"
+# CFG_PATH = "config/optsearch/workloads/46M_1BT.yaml"
 
 
 def train(
