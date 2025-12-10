@@ -48,7 +48,6 @@ def train(
   cfg, _ = utils.load_config(CFG_PATH)
 
   # Replace some arguments with user-specified ones
-  cfg = cfg._replace(lr=lr)
   cfg = cfg._replace(out_dir=pipeline_directory)
   cfg = cfg._replace(wandb_dir=pipeline_directory)
 
@@ -73,7 +72,7 @@ def train(
   engine.optimizers, engine.schedulers = {}, {}
   engine.optimizers['nos'] = optimizer_cls(
     model.parameters(),
-    lr=cfg.lr, 
+    lr=lr, 
     weight_decay=cfg.weight_decay, 
     betas=(cfg.beta1, cfg.beta2),
     eps=getattr(cfg, "eps", 1e-8)

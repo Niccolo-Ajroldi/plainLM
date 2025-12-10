@@ -167,7 +167,7 @@ def log(cfg, metrics):
   """Print metrics, log them on wandb."""
   if cfg.print_progress:
     msg = " | ".join(
-      f"{k}: {v[-1]:.3e}" if isinstance(v[-1], float) else f"{k}: {v[-1]}"
+      f"{k}: {float(v):.3e}" if isinstance(v, (int,float)) else f"{k}: {v[-1]:.3e}" if isinstance(v[-1], float) else f"{k}: {v[-1]}"
       for k, v in metrics.items()
     )
     print(msg)
@@ -178,7 +178,7 @@ def log(cfg, metrics):
 
 def print_master(msg):
   """Prints only in master process if using multiple GPUs."""
-  rank = os.environ.get("RANK", -1)
+  rank = os.environ.get("RANK", -1) # global rank
   ddp = int(rank) != -1
   master_process = (not ddp) or (int(rank) == 0)
   if master_process:

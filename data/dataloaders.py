@@ -81,13 +81,16 @@ def _get_sampler(train_set, cfg):
   """
   ddp = dist.is_initialized()
 
+  # fall back: sampler_seed -> seed -> None.
+  sampler_seed = getattr(cfg, 'sampler_seed', getattr(cfg, 'seed', None))
+
   if cfg.sampler == "random":
     if ddp:
-      sampler = DistributedSampler(train_set, shuffle=True, seed=cfg.sampler_seed, drop_last=True)
+      sampler = DistributedSampler(train_set, shuffle=True, seed=sampler_seed, drop_last=True)
     else:
       sampler = RandomSampler(
         train_set,
-        generator=torch.Generator().manual_seed(cfg.sampler_seed) if cfg.sampler_seed else None,
+        generator=torch.Generator().manual_seed(sampler_seed) if sampler_seed else None,
       )
 
   elif cfg.sampler == "sequential":
@@ -103,7 +106,7 @@ def _get_sampler(train_set, cfg):
       sampler = StatefulDistributedSampler(
         train_set,
         batch_size=cfg.micro_batch_size,
-        seed=cfg.sampler_seed,
+        seed=sampler_seed,
         start_iter=micro_step_start,
       )
     else:
@@ -111,7 +114,7 @@ def _get_sampler(train_set, cfg):
         train_set,
         batch_size=cfg.micro_batch_size,
         shuffle=True,
-        seed=cfg.sampler_seed,
+        seed=sampler_seed,
         start_idx=micro_step_start,
       )
 

@@ -64,7 +64,7 @@ class TorchEngine(torch.nn.Module):
     # Move model to device and to DDP
     self.model = model.to(device)
     if dist.is_initialized():
-      self.model = DDP(self.model, device_ids=[device.index])
+      self.model = DDP(self.model, device_ids=[device.index]) # same as device_ids=local_rank
 
     # Compile
     if cfg.torch_compile:

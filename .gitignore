@@ -37,3 +37,14 @@ wandb/
 
 # Ignore png files
 synthetic/*plots/
+
+# Ignore neps runs and results
+neps_runs/*/neps/
+neps_runs/*/results/
+
+# Ignore logs
+neps_runs/log/
+neps_runs/_log/
+
+# Ignore plots
+neps_nos/plots/

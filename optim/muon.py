@@ -9,16 +9,17 @@ from abc import ABC, abstractmethod
 from utils import print_master
 
 
+# Distributed settings
+USE_DDP = 'RANK' in os.environ
+RANK = int(os.environ['RANK']) if USE_DDP else 0
+LOCAL_RANK = int(os.environ['LOCAL_RANK']) if USE_DDP else 0
+WORLD_SIZE = int(os.environ["WORLD_SIZE"]) if USE_DDP else 1
+DEVICE = torch.device(f'cuda:{LOCAL_RANK}' if torch.cuda.is_available() else 'cpu')
+
 # Default values for Newton-Schulz
 NS_A, NS_B, NS_C = 3.4445, -4.7750, 2.0315
 NS_STEPSS = 5
 NS_EPS = 1e-7
-
-USE_PYTORCH_DDP = 'LOCAL_RANK' in os.environ
-RANK = int(os.environ['LOCAL_RANK']) if USE_PYTORCH_DDP else 0
-DEVICE = torch.device(f'cuda:{RANK}' if torch.cuda.is_available() else 'cpu')
-N_GPUS = torch.cuda.device_count()
-WORLD_SIZE = N_GPUS # single-node assumption
 
 
 @torch.compile()
