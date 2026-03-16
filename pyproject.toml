@@ -1,6 +1,6 @@
 [project]
 name = "plainLM"
-description = "Pretrain transofmrers on causal language modeling using PyTorch."
+description = "Pretrain transformers on causal language modeling using PyTorch."
 authors = [
     { name = "Niccolò Ajroldi" }
 ]
@@ -21,6 +21,9 @@ dependencies = [
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["data", "optim", "engine", "models"]
 
 [tool.ruff]
 line-length = 120
