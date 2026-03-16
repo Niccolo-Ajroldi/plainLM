@@ -1,6 +1,6 @@
 [project]
 name = "plainLM"
-description = "Pretrain transofmrers on causal language modeling using PyTorch."
+description = "Pretrain transformers on causal language modeling using PyTorch."
 authors = [
     { name = "Niccolò Ajroldi" }
 ]
