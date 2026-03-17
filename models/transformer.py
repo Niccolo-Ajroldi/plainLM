@@ -1,13 +1,14 @@
 """Transformer++, a simple LLama-style Transformer, supporting RMSNorm, RoPE, GLU"""
 
 import math
+from dataclasses import dataclass
+
 import torch
 import torch.nn.functional as F
 from torch import nn
-from dataclasses import dataclass
 
-from .components import RMSNorm, MLP, GLU, MLPReluSquared
-from .embeddings import precompute_freqs_cis, apply_rotary_emb_complex_like
+from .components import GLU, MLP, MLPReluSquared, RMSNorm
+from .embeddings import apply_rotary_emb_complex_like, precompute_freqs_cis
 
 
 @dataclass
@@ -21,6 +22,8 @@ class ModelConfig:
   mlp: str = 'mlp'
   rmsnorm_eps: float = 1e-6
   tie_embeddings: bool = False
+  qk_norm: bool = True
+  embed_norm: bool = True
 
 
 MLP_CLASSES = {'mlp': MLP, 'glu': GLU, 'mlp_relu_sq': MLPReluSquared}
@@ -35,6 +38,8 @@ class Attention(nn.Module):
 
     self.w_qkv = nn.Linear(cfg.dim, 3 * cfg.dim, bias=False)
     self.w_out = nn.Linear(cfg.dim, cfg.dim, bias=False)
+    self.q_norm = RMSNorm(self.head_dim, cfg.rmsnorm_eps) if cfg.qk_norm else nn.Identity()
+    self.k_norm = RMSNorm(self.head_dim, cfg.rmsnorm_eps) if cfg.qk_norm else nn.Identity()
 
   def forward(self, x, freqs_cis, attn_mask=None):
     bsz, seqlen, d = x.shape  # (bsz, seqlen, d)
@@ -44,6 +49,7 @@ class Attention(nn.Module):
     k = k.view(bsz, seqlen, self.n_heads, self.head_dim)  # (bsz, seqlen, nh, h_dim)
     v = v.view(bsz, seqlen, self.n_heads, self.head_dim)  # (bsz, seqlen, nh, h_dim)
 
+    q, k = self.q_norm(q), self.k_norm(k)
     q, k = apply_rotary_emb_complex_like(q, k, freqs_cis=freqs_cis)  # (bsz, seqlen, nh, h_dim)
 
     q = q.transpose(1, 2)  # (bsz, nh, seqlen, h_dim)
@@ -92,6 +98,7 @@ class Transformer(nn.Module):
       raise ValueError('dim must be divisible by n_heads')
 
     self.embed_tokens = nn.Embedding(cfg.vocab_size, cfg.dim)
+    self.embed_norm = RMSNorm(cfg.dim, cfg.rmsnorm_eps) if cfg.embed_norm else nn.Identity()
     self.layers = nn.ModuleList([Block(idx, cfg) for idx in range(cfg.n_layers)])
     self.out_norm = RMSNorm(cfg.dim, cfg.rmsnorm_eps)
     self.lm_head = nn.Linear(cfg.dim, cfg.vocab_size, bias=False)
@@ -108,6 +115,7 @@ class Transformer(nn.Module):
   def forward(self, x, attn_mask):
     # x: (bsz, seqlen)
     x = self.embed_tokens(x)  # (bsz, seqlen, dim)
+    x = self.embed_norm(x)
     self.freqs_cis = self.freqs_cis.to(x.device)
     for layer in self.layers:
       x = layer(x, self.freqs_cis, attn_mask)  # (bsz, seqlen, dim)

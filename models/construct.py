@@ -1,4 +1,5 @@
 from fractions import Fraction
+
 import wandb
 
 
@@ -7,7 +8,7 @@ def construct_model(cfg):
 
   # Transformer++
   if cfg.model == 'transformer':
-    from .transformer import Transformer, ModelConfig
+    from .transformer import ModelConfig, Transformer
 
     model_cfg = ModelConfig(
       vocab_size=cfg.vocab_size,
@@ -19,6 +20,8 @@ def construct_model(cfg):
       mlp=cfg.mlp_class,
       seq_len=cfg.seq_len,
       tie_embeddings=cfg.tie_embeddings,
+      qk_norm=cfg.qk_norm,
+      embed_norm=cfg.embed_norm,
     )
     model = Transformer(model_cfg)
 

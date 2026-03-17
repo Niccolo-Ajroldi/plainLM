@@ -1,13 +1,13 @@
-import torch
+from contextlib import nullcontext
 
+import torch
 from torch import distributed as dist
 from torch.nn import CrossEntropyLoss
 from torch.nn.parallel import DistributedDataParallel as DDP
-from contextlib import nullcontext
 
-from models import get_param_groups
-from optim import intialize_optimizer, initialize_scheduler
 from data.datasets.data_prep_utils import intra_doc_causal_mask
+from models import get_param_groups
+from optim import initialize_scheduler, intialize_optimizer
 
 
 def _move_to_device(batch, seq_len, device, intra_doc_masking):
@@ -172,6 +172,6 @@ class TorchEngine(torch.nn.Module):
       num_batches = num_batches_tensor.item()
 
     # calculate average loss
-    avg_loss = total_loss.item() / num_batches.item()
+    avg_loss = total_loss / num_batches
 
     return avg_loss

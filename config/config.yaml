@@ -23,6 +23,8 @@ n_layers: 12
 n_heads: 12
 rms_norm: True
 tie_embeddings: False
+qk_norm: True
+embed_norm: True
 torch_compile: True
 
 # note: step budget=token_budget/(seq_len * micro_batch_size * grad_accumulation_steps * ddp_world_size)
