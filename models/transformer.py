@@ -22,6 +22,8 @@ class ModelConfig:
   mlp: str = 'mlp'
   rmsnorm_eps: float = 1e-6
   tie_embeddings: bool = False
+  qk_norm: bool = True
+  embed_norm: bool = True
 
 
 MLP_CLASSES = {'mlp': MLP, 'glu': GLU, 'mlp_relu_sq': MLPReluSquared}
@@ -36,8 +38,8 @@ class Attention(nn.Module):
 
     self.w_qkv = nn.Linear(cfg.dim, 3 * cfg.dim, bias=False)
     self.w_out = nn.Linear(cfg.dim, cfg.dim, bias=False)
-    self.q_norm = RMSNorm(self.head_dim, cfg.rmsnorm_eps)
-    self.k_norm = RMSNorm(self.head_dim, cfg.rmsnorm_eps)
+    self.q_norm = RMSNorm(self.head_dim, cfg.rmsnorm_eps) if cfg.qk_norm else nn.Identity()
+    self.k_norm = RMSNorm(self.head_dim, cfg.rmsnorm_eps) if cfg.qk_norm else nn.Identity()
 
   def forward(self, x, freqs_cis, attn_mask=None):
     bsz, seqlen, d = x.shape  # (bsz, seqlen, d)
@@ -96,7 +98,7 @@ class Transformer(nn.Module):
       raise ValueError('dim must be divisible by n_heads')
 
     self.embed_tokens = nn.Embedding(cfg.vocab_size, cfg.dim)
-    self.embed_norm = RMSNorm(cfg.dim, cfg.rmsnorm_eps)
+    self.embed_norm = RMSNorm(cfg.dim, cfg.rmsnorm_eps) if cfg.embed_norm else nn.Identity()
     self.layers = nn.ModuleList([Block(idx, cfg) for idx in range(cfg.n_layers)])
     self.out_norm = RMSNorm(cfg.dim, cfg.rmsnorm_eps)
     self.lm_head = nn.Linear(cfg.dim, cfg.vocab_size, bias=False)
